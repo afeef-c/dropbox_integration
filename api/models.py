@@ -1,0 +1,56 @@
+from django.db import models
+
+# Create your models here.
+
+class Location(models.Model):
+    locationId = models.CharField(primary_key=True, max_length=700)
+    location_name = models.CharField(max_length=700, null=True, blank=True)
+    timezone = models.CharField(max_length=700, null=True, blank=True)
+    access_token = models.TextField()
+    refresh_token = models.TextField()
+    expires_in = models.DateTimeField()
+
+    def __str__(self):
+        return self.locationId
+
+class Contact(models.Model):
+    contact_id = models.CharField(primary_key=True, max_length=700)
+    project_id = models.CharField(max_length=700, unique=True)
+    location_id = models.CharField(max_length=700, null=True, blank=True)
+    location_name = models.CharField(max_length=700, null=True, blank=True)
+    name = models.CharField(max_length=700, null=True, blank=True)
+    primary_phone = models.CharField(max_length=700, null=True, blank=True)
+    primary_email = models.CharField(max_length=700, null=True, blank=True)
+    secondary_phone = models.CharField(max_length=700, null=True, blank=True)
+    secondary_email = models.CharField(max_length=700, null=True, blank=True)
+    refferd_by = models.CharField(max_length=700, null=True, blank=True)
+    address = models.CharField(max_length=700, null=True, blank=True)
+    zip = models.CharField(max_length=700, null=True, blank=True)
+    city = models.CharField(max_length=700, null=True, blank=True)
+    state = models.CharField(max_length=700, null=True, blank=True)
+    hoa = models.CharField(max_length=700, null=True, blank=True)
+    plot_plan = models.CharField(max_length=700, null=True, blank=True)
+    hardscape_2d_3d = models.FloatField(null=True, blank=True)
+    hardscape_and_planting = models.FloatField(null=True, blank=True)
+    above_plan_plus = models.FloatField(null=True, blank=True)
+    measuring_for_site_plan = models.FloatField(null=True, blank=True)
+    property_droning = models.FloatField(null=True, blank=True)
+    property_survey = models.FloatField(null=True, blank=True)
+    consultations_and_revisions_amount_hour = models.IntegerField(null=True, blank=True)
+    other = models.FloatField(null=True, blank=True)
+    describe_other = models.CharField(max_length=700, null=True, blank=True)
+    project_amount = models.FloatField(null=True, blank=True)
+    payment_option = models.CharField(max_length=700, null=True, blank=True)
+    amount_to_charge_for_credit_card = models.FloatField(null=True, blank=True)
+    card_holder_name = models.CharField(max_length=700, null=True, blank=True)
+    credit_card_number = models.CharField(max_length=700, null=True, blank=True)
+    expiration_date = models.DateField(null=True, blank=True)
+    billing_zip_code = models.CharField(max_length=700, null=True, blank=True)
+    cvv = models.CharField(max_length=700, null=True, blank=True)
+    amount_to_charge_for_zelle = models.FloatField(null=True, blank=True)
+    amount_to_charge_for_cash = models.FloatField(null=True, blank=True)
+    amount_to_charge_for_check = models.FloatField(null=True, blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    client_signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
+    representative_signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
+    pdf = models.FileField(upload_to='pdfs/', null=True, blank=True)
