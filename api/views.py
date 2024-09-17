@@ -17,6 +17,9 @@ from .serializers import *
 from django.db.models import Q
 from .tasks import historic_fetch
 import json
+from django.core.files.base import ContentFile
+import base64
+from io import BytesIO
 
 # Create your views here.
 
@@ -232,83 +235,71 @@ def submit_agreement(request):
     serializer = ContactSerializer(contact)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
+def _decode_base64_image(base64_str):
+    format, imgstr = base64_str.split(';base64,')
+    ext = format.split('/')[-1]
+    img_data = base64.b64decode(imgstr)
+    return ContentFile(img_data, name=f'signature.{ext}')
+
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_form_data(request):
     print(request.data)
-    values = request.data.get('values')
+    form_data = request.data
+
+
+    client_signature = request.FILES.get('signature')
+    representative_signature = request.FILES.get('representative_sign')
+    agreement = request.FILES.get('pdf')
     
-    if values:
-        # Log the raw JSON string
-        print("Raw JSON string:", values[0])
-        
-        try:
-            # Parse the JSON string
-            form_data = json.loads(values[0])
-        except json.JSONDecodeError as e:
-            # Log and return a meaningful error message if JSON is invalid
-            print("JSON decode error:", e)
-            return Response({"error": "Invalid JSON format in 'values'"}, status=400)
+    # Extract form data from the parsed JSON
+    project_id = form_data.get('project_id')
+    refferd_by = form_data.get('refferd_by')
+    client_name = form_data.get('client_name')
+    print(client_name)
+    address = form_data.get('address')
+    city = form_data.get('city')
+    state = form_data.get('state')
+    zip = form_data.get('zip')
+    primary_phone = form_data.get('primary_phone')
+    secondary_phone = form_data.get('secondary_phone')
+    primary_email = form_data.get('primary_email')
+    secondary_email = form_data.get('secondary_email')
 
-        # Extract form data from the parsed JSON
-        project_id = form_data.get('project_id')
-        refferd_by = form_data.get('refferd_by')
-        client_name = form_data.get('client_name')
-        address = form_data.get('address')
-        city = form_data.get('city')
-        state = form_data.get('state')
-        zip = form_data.get('zip')
-        primary_phone = form_data.get('primary_phone')
-        secondary_phone = form_data.get('secondary_phone')
-        primary_email = form_data.get('primary_email')
-        secondary_email = form_data.get('secondary_email')
+    # // Project Info
+    HOA = form_data.get('HOA')
+    plot_plan = form_data.get('plot_plan')
+    hardscape = form_data.get('hardscape')
+    hardscape_and_planning = form_data.get('hardscape_and_planning')
+    above_plans_plus = form_data.get('above_plans_plus')
+    measuring_for_site_plan = form_data.get('measuring_for_site_plan')
+    property_droning = form_data.get('property_droning')
+    property_survey = form_data.get('property_survey')
+    consultations_and_revisions_amount = form_data.get('consultations_and_revisions_amount')
+    other = form_data.get('other')
+    describe_other = form_data.get('describe_other')
+    project_amount = form_data.get('project_amount')
 
-        # // Project Info
-        HOA = form_data.get('HOA')
-        plot_plan = form_data.get('plot_plan')
-        hardscape = form_data.get('hardscape')
-        hardscape_and_planning = form_data.get('hardscape_and_planning')
-        above_plans_plus = form_data.get('above_plans_plus')
-        measuring_for_site_plan = form_data.get('measuring_for_site_plan')
-        property_droning = form_data.get('property_droning')
-        property_survey = form_data.get('property_survey')
-        consultations_and_revisions_amount = form_data.get('consultations_and_revisions_amount')
-        other = form_data.get('other')
-        describe_other = form_data.get('describe_other')
-        project_amount = form_data.get('project_amount')
+    # // Billing Info
+    payment_options = form_data.get('payment_options')
 
-        # // Billing Info
-        payment_options = form_data.get('payment_options')
+    # //credit card
+    amount_to_charge_for_credit_card = form_data.get('amount_to_charge_for_credit_card')
+    card_holder_name = form_data.get('card_holder_name')
+    credit_card_number = form_data.get('credit_card_number')
+    expiration_date = form_data.get('expiration_date')
+    billing_zip_code = form_data.get('billing_zip_code')
+    CVV = form_data.get('CVV')
 
-        # //credit card
-        amount_to_charge_for_credit_card = form_data.get('amount_to_charge_for_credit_card')
-        card_holder_name = form_data.get('card_holder_name')
-        credit_card_number = form_data.get('credit_card_number')
-        expiration_date = form_data.get('expiration_date')
-        billing_zip_code = form_data.get('billing_zip_code')
-        CVV = form_data.get('CVV')
+    # //zelle
+    amount_to_charge_for_zelle = form_data.get('amount_to_charge_for_zelle')
 
-        # //zelle
-        amount_to_charge_for_zelle = form_data.get('amount_to_charge_for_zelle')
+    # //cash
+    amount_to_charge_for_cash = form_data.get('amount_to_charge_for_cash')
 
-        # //cash
-        amount_to_charge_for_cash = form_data.get('amount_to_charge_for_cash')
-
-        # //check
-        amount_to_charge_for_check = form_data.get('amount_to_charge_for_check')
-        check_number = form_data.get('check_number')
-
-        # Extract files
-        client_signature = request.FILES.get('signature')
-        representative_signature = request.FILES.get('representative_sign')
-        agreement = request.FILES.get('pdf')
-
-        # Debug prints
-        print("Client Name:", client_name)
-        print("Project ID:", project_id)
-        print("Client Signature:", client_signature)
-    else:
-        return Response({"error": "No form data found"}, status=400)
+    # //check
+    amount_to_charge_for_check = form_data.get('amount_to_charge_for_check')
+    check_number = form_data.get('check_number')
 
     location = Location.objects.first()
     location_id = location.locationId
