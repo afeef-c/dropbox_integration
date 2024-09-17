@@ -228,7 +228,7 @@ def historic_fetch(self, *args):
                         
                     try:
                         Contact.objects.update_or_create(
-                            contact_id = models.CharField(primary_key=True, max_length=700),
+                            contact_id = contact_id,
                             defaults = {
                                 'project_id' : project_id,
                                 'location_id': location_id,
