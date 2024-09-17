@@ -428,6 +428,7 @@ def submit_form_data(request):
         project_count = Contact.objects.filter(project_id__startswith=year_short).count() + 1
         # Generate project_id in the format YYYY-0001
         project_id = f"{year_short}-{str(project_count).zfill(3)}"
+        print(project_id)
         defaults['project_id'] = project_id
         defaults['submitted_at'] = submitted_at.date()
         
@@ -540,12 +541,15 @@ def submit_form_data(request):
             contact_data = response.json()
             contact = contact_data.get('contact')
             contact_id = contact['id']
+            print(contact_id)
 
             # Use update_or_create method
             new_contact, created = Contact.objects.update_or_create(
                 contact_id=contact_id,
                 defaults=defaults
             )
+
+            print('contact created')
 
             if client_signature:
                 update_contact_client_signatures(location_id, contact_id, client_signature_cf)
