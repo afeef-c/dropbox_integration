@@ -676,7 +676,7 @@ def submit_form_data(request):
             data['state'] = state
 
         print(data)
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.put(url, headers=headers, json=data)
         if response.ok:
             # Use update_or_create method
             update_contact, created = Contact.objects.update_or_create(
