@@ -239,6 +239,7 @@ def submit_form_data(request):
     project_id = request.data.get('project_id')
     refferd_by = request.data.get('refferd_by')
     client_name = request.data.get('client_name')
+    print(client_name)
     address = request.data.get('address')
     city = request.data.get('city')
     state = request.data.get('state')
