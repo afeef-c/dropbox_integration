@@ -521,6 +521,7 @@ def submit_form_data(request):
             ]
         }
 
+        print(data)
         response = requests.post(url, headers=headers, json=data)
         if response.ok:
             contact_data = response.json()
@@ -657,6 +658,7 @@ def submit_form_data(request):
         if state:
             data['state'] = state
 
+        print(data)
         response = requests.post(url, headers=headers, json=data)
         if response.ok:
             # Use update_or_create method
