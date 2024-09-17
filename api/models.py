@@ -51,7 +51,7 @@ class Contact(models.Model):
     amount_to_charge_for_cash = models.FloatField(null=True, blank=True)
     amount_to_charge_for_check = models.FloatField(null=True, blank=True)
     check_number = models.CharField(max_length=700, null=True, blank=True)
-    submitted_at = models.DateTimeField(null=True, blank=True)
+    submitted_at = models.DateField(null=True, blank=True)
     client_signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
     representative_signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
     pdf = models.FileField(upload_to='pdfs/', null=True, blank=True)
