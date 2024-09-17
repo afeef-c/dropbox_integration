@@ -16,6 +16,7 @@ import uuid
 from .serializers import *
 from django.db.models import Q
 from .tasks import historic_fetch
+import json
 
 # Create your views here.
 
@@ -235,59 +236,65 @@ def submit_agreement(request):
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_form_data(request):
     print(request.data)
-    # Extract form data
-    project_id = request.data.get('project_id')
-    refferd_by = request.data.get('refferd_by')
-    client_name = request.data.get('client_name')
-    print(client_name)
-    address = request.data.get('address')
-    city = request.data.get('city')
-    state = request.data.get('state')
-    zip = request.data.get('zip')
-    primary_phone = request.data.get('primary_phone')
-    secondary_phone = request.data.get('secondary_phone')
-    primary_email = request.data.get('primary_email')
-    secondary_email = request.data.get('secondary_email')
+    values = request.data.get('values')
+    if values:
+        form_data = json.loads(values[0])  # Parse the JSON string
 
-    # // Project Info
-    HOA = request.data.get('HOA')
-    plot_plan = request.data.get('plot_plan')
-    hardscape = request.data.get('hardscape')
-    hardscape_and_planning = request.data.get('hardscape_and_planning')
-    above_plans_plus = request.data.get('above_plans_plus')
-    measuring_for_site_plan = request.data.get('measuring_for_site_plan')
-    property_droning = request.data.get('property_droning')
-    property_survey = request.data.get('property_survey')
-    consultations_and_revisions_amount = request.data.get('consultations_and_revisions_amount')
-    other = request.data.get('other')
-    describe_other = request.data.get('describe_other')
-    project_amount = request.data.get('project_amount')
+        # Extract form data
+        project_id = form_data.get('project_id')
+        refferd_by = form_data.get('refferd_by')
+        client_name = form_data.get('client_name')
+        print(client_name)
+        address = form_data.get('address')
+        city = form_data.get('city')
+        state = form_data.get('state')
+        zip = form_data.get('zip')
+        primary_phone = form_data.get('primary_phone')
+        secondary_phone = form_data.get('secondary_phone')
+        primary_email = form_data.get('primary_email')
+        secondary_email = form_data.get('secondary_email')
 
-    # // Billing Info
-    payment_options = request.data.get('payment_options')
+        # // Project Info
+        HOA = form_data.get('HOA')
+        plot_plan = form_data.get('plot_plan')
+        hardscape = form_data.get('hardscape')
+        hardscape_and_planning = form_data.get('hardscape_and_planning')
+        above_plans_plus = form_data.get('above_plans_plus')
+        measuring_for_site_plan = form_data.get('measuring_for_site_plan')
+        property_droning = form_data.get('property_droning')
+        property_survey = form_data.get('property_survey')
+        consultations_and_revisions_amount = form_data.get('consultations_and_revisions_amount')
+        other = form_data.get('other')
+        describe_other = form_data.get('describe_other')
+        project_amount = form_data.get('project_amount')
 
-    # //credit card
-    amount_to_charge_for_credit_card = request.data.get('amount_to_charge_for_credit_card')
-    card_holder_name = request.data.get('card_holder_name')
-    credit_card_number = request.data.get('credit_card_number')
-    expiration_date = request.data.get('expiration_date')
-    billing_zip_code = request.data.get('billing_zip_code')
-    CVV = request.data.get('CVV')
+        # // Billing Info
+        payment_options = form_data.get('payment_options')
 
-    # //zelle
-    amount_to_charge_for_zelle = request.data.get('amount_to_charge_for_zelle')
+        # //credit card
+        amount_to_charge_for_credit_card = form_data.get('amount_to_charge_for_credit_card')
+        card_holder_name = form_data.get('card_holder_name')
+        credit_card_number = form_data.get('credit_card_number')
+        expiration_date = form_data.get('expiration_date')
+        billing_zip_code = form_data.get('billing_zip_code')
+        CVV = form_data.get('CVV')
 
-    # //cash
-    amount_to_charge_for_cash = request.data.get('amount_to_charge_for_cash')
+        # //zelle
+        amount_to_charge_for_zelle = form_data.get('amount_to_charge_for_zelle')
 
-    # //check
-    amount_to_charge_for_check = request.data.get('amount_to_charge_for_check')
-    check_number = request.data.get('ckeck_number')
+        # //cash
+        amount_to_charge_for_cash = form_data.get('amount_to_charge_for_cash')
 
-    # Extract files
-    client_signature = request.FILES.get('client_sign')
-    representative_signature = request.FILES.get('representative_sign')
-    agreement = request.FILES.get('pdf')
+        # //check
+        amount_to_charge_for_check = form_data.get('amount_to_charge_for_check')
+        check_number = form_data.get('check_number')
+
+        # Extract files
+        client_signature = request.FILES.get('signature')
+        representative_signature = request.FILES.get('representative_sign')
+        agreement = request.FILES.get('pdf')
+    else:
+        return Response({"error": "No form data found"}, status=400)
 
     location = Location.objects.first()
     location_id = location.locationId
