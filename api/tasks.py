@@ -275,6 +275,7 @@ def historic_fetch(self, *args):
                     except Exception as e:
                         print(e)
                         print(contact_id)
+                        print(name)
 
                 url = data['meta']['nextPageUrl']
 

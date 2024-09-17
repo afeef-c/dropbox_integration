@@ -15,6 +15,7 @@ import pytz
 import uuid
 from .serializers import *
 from django.db.models import Q
+from .views import historic_fetch
 
 # Create your views here.
 
@@ -180,7 +181,7 @@ def get_all_custom_fields(location_id):
     else:
        return None
     
-@api_view(['POST'])
+@api_view(['GET'])
 def current_clients(request):
     limit = request.GET.get('limit', 10)
     offset = request.GET.get('offset', 0)
@@ -896,18 +897,7 @@ def update_contact_agreement(location_id, contact_id, agreement_cf):
         print('Failed to upload Agreement')
 
 
-
-# {
-#     "id": client_signature_cf,
-#     "field_value": {
-#         str(uuid.uuid4()): {
-#             "meta": {
-#                 "fieldname": client_signature_cf,
-#                 "originalname": 'client_signature',
-#                 "mimetype": "image/png",
-#                 "uuid": str(uuid.uuid4())
-#             },
-#             "url": file_link
-#         }
-#     }
-# }
+@api_view(['GET'])
+def historic(request):
+    historic_fetch.delay()
+    return Response('started', status=status.HTTP_200_OK)
