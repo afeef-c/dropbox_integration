@@ -234,6 +234,7 @@ def submit_agreement(request):
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_form_data(request):
+    print(request.data)
     # Extract form data
     project_id = request.data.get('project_id')
     refferd_by = request.data.get('refferd_by')
