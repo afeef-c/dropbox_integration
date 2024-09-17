@@ -19,7 +19,7 @@ class ContactSerializer(serializers.ModelSerializer):
             'project_amount', 'payment_option', 'amount_to_charge_for_credit_card',
             'card_holder_name', 'credit_card_number', 'expiration_date', 'billing_zip_code',
             'cvv', 'amount_to_charge_for_zelle', 'amount_to_charge_for_cash', 
-            'amount_to_charge_for_check', 'submitted_at', 'client_signature_url', 
+            'amount_to_charge_for_check', 'check_number', 'submitted_at', 'client_signature_url', 
             'representative_signature_url', 'pdf_url'
         ]
 

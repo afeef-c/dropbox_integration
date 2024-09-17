@@ -251,6 +251,7 @@ def submit_form_data(request):
 
     # //check
     amount_to_charge_for_check = request.data.get('amount_to_charge_for_check')
+    check_number = request.data.get('ckeck_number')
 
     # Extract files
     client_signature = request.FILES.get('client_sign')
@@ -304,8 +305,10 @@ def submit_form_data(request):
             amount_to_charge_for_zelle_cf = field['id']
         if field['name'] == 'Amount to charge for cash':
             amount_to_charge_for_cash_cf = field['id']
-        if field['name'] == 'Amount to charge for cheque':
+        if field['name'] == 'Amount to charge for check':
             amount_to_charge_for_check_cf = field['id']
+        if field['name'] == 'Check Number':
+            check_number_cf = field['id']
         if field['name'] == 'Client Signature':
             client_signature_cf = field['id']
         if field['name'] == 'Representative Signature':
@@ -348,6 +351,7 @@ def submit_form_data(request):
         'amount_to_charge_for_zelle': amount_to_charge_for_zelle,
         'amount_to_charge_for_cash': amount_to_charge_for_cash,
         'amount_to_charge_for_check': amount_to_charge_for_check,
+        'check_number': check_number,
         'client_signature' : client_signature,
         'representative_signature' : representative_signature,
         'submitted_at': submitted_at,
@@ -466,6 +470,10 @@ def submit_form_data(request):
                 {
                     "id": amount_to_charge_for_check_cf,
                     "field_value": amount_to_charge_for_check
+                },
+                {
+                    "id": check_number_cf,
+                    "field_value": check_number
                 }
             ]
         }
@@ -584,6 +592,10 @@ def submit_form_data(request):
                 {
                     "id": amount_to_charge_for_check_cf,
                     "field_value": amount_to_charge_for_check
+                },
+                {
+                    "id": check_number_cf,
+                    "field_value": check_number
                 }
             ]
         }
