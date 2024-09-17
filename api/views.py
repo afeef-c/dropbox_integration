@@ -237,14 +237,23 @@ def submit_agreement(request):
 def submit_form_data(request):
     print(request.data)
     values = request.data.get('values')
+    
     if values:
-        form_data = json.loads(values[0])  # Parse the JSON string
+        # Log the raw JSON string
+        print("Raw JSON string:", values[0])
+        
+        try:
+            # Parse the JSON string
+            form_data = json.loads(values[0])
+        except json.JSONDecodeError as e:
+            # Log and return a meaningful error message if JSON is invalid
+            print("JSON decode error:", e)
+            return Response({"error": "Invalid JSON format in 'values'"}, status=400)
 
-        # Extract form data
+        # Extract form data from the parsed JSON
         project_id = form_data.get('project_id')
         refferd_by = form_data.get('refferd_by')
         client_name = form_data.get('client_name')
-        print(client_name)
         address = form_data.get('address')
         city = form_data.get('city')
         state = form_data.get('state')
@@ -293,6 +302,11 @@ def submit_form_data(request):
         client_signature = request.FILES.get('signature')
         representative_signature = request.FILES.get('representative_sign')
         agreement = request.FILES.get('pdf')
+
+        # Debug prints
+        print("Client Name:", client_name)
+        print("Project ID:", project_id)
+        print("Client Signature:", client_signature)
     else:
         return Response({"error": "No form data found"}, status=400)
 
