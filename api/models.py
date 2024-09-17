@@ -55,3 +55,6 @@ class Contact(models.Model):
     client_signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
     representative_signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
     pdf = models.FileField(upload_to='pdfs/', null=True, blank=True)
+    modified_at = models.DateField(null=True, blank=True)
+    representative_signed_date = models.DateField(null=True, blank=True)
+    client_signed_date = models.DateField(null=True, blank=True)

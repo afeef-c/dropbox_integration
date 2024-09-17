@@ -20,7 +20,8 @@ class ContactSerializer(serializers.ModelSerializer):
             'card_holder_name', 'credit_card_number', 'expiration_date', 'billing_zip_code',
             'cvv', 'amount_to_charge_for_zelle', 'amount_to_charge_for_cash', 
             'amount_to_charge_for_check', 'check_number', 'submitted_at', 'client_signature_url', 
-            'representative_signature_url', 'pdf_url'
+            'representative_signature_url', 'pdf_url', 'modified_at', 'representative_signed_date',
+            'client_signed_date'
         ]
 
     def get_client_signature_url(self, obj):

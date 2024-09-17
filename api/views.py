@@ -14,6 +14,7 @@ from datetime import timezone as tzone
 import pytz
 import uuid
 from .serializers import *
+from django.db.models import Q
 
 # Create your views here.
 
@@ -181,7 +182,33 @@ def get_all_custom_fields(location_id):
     
 @api_view(['POST'])
 def current_clients(request):
-    all_contacts = Contact.objects.all().order_by('-submitted_at')
+    limit = request.GET.get('limit', 10)
+    offset = request.GET.get('offset', 0)
+    limit = int(limit)
+    offset = int(offset)
+    search = request.GET.get('search')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+    end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+
+    all_contacts = Contact.objects.filter(submitted_at__range=[start_date, end_date]).order_by('-submitted_at')
+
+    if search:
+        search_lower = search.lower()
+        all_contacts = all_contacts.filter(
+            Q(name__istartswith=search_lower) |
+            Q(email__istartswith=search_lower) |
+            Q(phone__istartswith=search_lower)
+        )
+    else:
+        all_contacts = all_contacts
+    
+    # Apply offset and limit
+    if offset or limit:
+        all_contacts = all_contacts[offset:offset + limit]
+
     serializer = ContactSerializer(all_contacts, many=True)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
     
@@ -213,6 +240,7 @@ def submit_form_data(request):
     address = request.data.get('address')
     city = request.data.get('city')
     state = request.data.get('state')
+    zip = request.data.get('zip')
     primary_phone = request.data.get('primary_phone')
     secondary_phone = request.data.get('secondary_phone')
     primary_email = request.data.get('primary_email')
@@ -256,6 +284,7 @@ def submit_form_data(request):
     # Extract files
     client_signature = request.FILES.get('client_sign')
     representative_signature = request.FILES.get('representative_sign')
+    agreement = request.FILES.get('pdf')
 
     location = Location.objects.first()
     location_id = location.locationId
@@ -313,6 +342,8 @@ def submit_form_data(request):
             client_signature_cf = field['id']
         if field['name'] == 'Representative Signature':
             representative_signature_cf = field['id']
+        if field['name'] == 'Agreement':
+            agreement_cf = field['id']
         if field['name'] == 'ReferredBy':
             refferd_by_cf = field['id']
 
@@ -329,6 +360,7 @@ def submit_form_data(request):
         'address': address,
         'city': city,
         'state': state,
+        'zip': zip,
         'hoa': HOA,
         'plot_plan': plot_plan,
         'hardscape_2d_3d': hardscape,
@@ -354,9 +386,15 @@ def submit_form_data(request):
         'check_number': check_number,
         'client_signature' : client_signature,
         'representative_signature' : representative_signature,
-        'submitted_at': submitted_at,
+        'agreement' : agreement,
+        'modified_at': submitted_at.date(),
     }
 
+    if client_signature:
+        defaults['client_signed_date'] = submitted_at.date()
+
+    if representative_signature:
+        defaults['representative_signed_date'] = submitted_at.date()
 
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -369,11 +407,14 @@ def submit_form_data(request):
 
     if not project_id:
         current_year = datetime.datetime.now().year
+        # Extract last two digits of the year
+        year_short = str(current_year)[-2:]
         # Count the number of projects for the current year
-        project_count = Contact.objects.filter(project_id__startswith=str(current_year)).count() + 1
+        project_count = Contact.objects.filter(project_id__startswith=year_short).count() + 1
         # Generate project_id in the format YYYY-0001
-        project_id = f"{current_year}-{str(project_count).zfill(4)}"
+        project_id = f"{year_short}-{str(project_count).zfill(3)}"
         defaults['project_id'] = project_id
+        defaults['submitted_at'] = submitted_at.date()
         
         url = "https://services.leadconnectorhq.com/contacts/"
         headers = {
@@ -490,7 +531,12 @@ def submit_form_data(request):
                 defaults=defaults
             )
 
-            update_contact_signatures(location_id, contact_id, client_signature_cf, representative_signature_cf)
+            if client_signature:
+                update_contact_client_signatures(location_id, contact_id, client_signature_cf)
+            if representative_signature:
+                update_contact_representative_signatures(location_id, contact_id, representative_signature_cf)
+            if agreement:
+                update_contact_agreement(location_id, contact_id, agreement_cf)
             serializer = ContactSerializer(new_contact)
             return Response({'data': serializer.data}, status=status.HTTP_200_OK)
         else:
@@ -617,7 +663,12 @@ def submit_form_data(request):
                 defaults=defaults
             )
 
-            update_contact_signatures(location_id, contact_id, client_signature_cf, representative_signature_cf)
+            if client_signature:
+                update_contact_client_signatures(location_id, contact_id, client_signature_cf)
+            if representative_signature:
+                update_contact_representative_signatures(location_id, contact_id, representative_signature_cf)
+            if agreement:
+                update_contact_agreement(location_id, contact_id, agreement_cf)
 
             serializer = ContactSerializer(update_contact)
             return Response({'data': serializer.data}, status=status.HTTP_200_OK)
@@ -626,6 +677,104 @@ def submit_form_data(request):
             print(error_response)
             message = error_response.get('message')
             return Response(message, status=status.HTTP_400_BAD_REQUEST)
+        
+def update_contact_client_signatures(location_id, contact_id, client_signature_cf):
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+
+    location = Location.objects.get(locationId = location_id)
+    access_token = location.access_token
+
+    contact = Contact.objects.get(contact_id=contact_id)
+    if contact.client_signature:
+        client_signature_link = f'{settings.BASE_URL}{contact.client_signature.url}'
+    else:
+        client_signature_link = None
+
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Version": "2021-07-28"
+    }
+
+    data = {
+            "customFields": [
+                {
+                    "id": client_signature_cf,
+                    "field_value": {
+                        str(uuid.uuid4()): {
+                            "meta": {
+                                "fieldname": client_signature_cf,
+                                "originalname": 'client_signature',
+                                "mimetype": "image/png",
+                                "uuid": str(uuid.uuid4())
+                            },
+                            "url": client_signature_link
+                        }
+                    }
+                }
+            ]
+    }
+
+    response = requests.put(url, headers=headers, json=data)
+    if response.ok:
+        print('Client signatures uploaded')
+    else:
+        print('Failed to upload Client signatures')
+
+def update_contact_representative_signatures(location_id, contact_id, representative_signature_cf):
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+
+    location = Location.objects.get(locationId = location_id)
+    access_token = location.access_token
+
+    contact = Contact.objects.get(contact_id=contact_id)
+    if contact.representative_signature:
+        representative_signature_link = f'{settings.BASE_URL}{contact.representative_signature.url}'
+    else:
+        representative_signature_link = None
+
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Version": "2021-07-28"
+    }
+
+    data = {
+            "customFields": [
+                {
+                    "id": representative_signature_cf,
+                    "field_value": {
+                        str(uuid.uuid4()): {
+                            "meta": {
+                                "fieldname": representative_signature_cf,
+                                "originalname": 'client_signature',
+                                "mimetype": "image/png",
+                                "uuid": str(uuid.uuid4())
+                            },
+                            "url": representative_signature_link
+                        }
+                    }
+                }
+            ]
+    }
+
+    response = requests.put(url, headers=headers, json=data)
+    if response.ok:
+        print('Representative signatures uploaded')
+    else:
+        print('Failed to upload Representative signatures')
 
 def update_contact_signatures(location_id, contact_id, client_signature_cf, representative_signature_cf):
     check_is_token_expired = checking_token_expiration(location_id)
@@ -696,11 +845,7 @@ def update_contact_signatures(location_id, contact_id, client_signature_cf, repr
         print('Failed to upload signatures')
 
 
-def update_contact_agreement(location_id, contact_id):
-    all_custom_fields = get_all_custom_fields(location_id)
-    for field in all_custom_fields:
-        if field['name'] == 'Agreement':
-            agreement_cf = field['id']
+def update_contact_agreement(location_id, contact_id, agreement_cf):
 
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -750,10 +895,6 @@ def update_contact_agreement(location_id, contact_id):
     else:
         print('Failed to upload Agreement')
 
-
-            
-
-    
 
 
 # {
