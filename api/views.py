@@ -401,7 +401,7 @@ def submit_form_data(request):
         'check_number': check_number,
         'client_signature' : client_signature,
         'representative_signature' : representative_signature,
-        'agreement' : agreement,
+        'pdf' : agreement,
         'modified_at': submitted_at.date(),
     }
 
