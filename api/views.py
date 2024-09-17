@@ -15,7 +15,7 @@ import pytz
 import uuid
 from .serializers import *
 from django.db.models import Q
-from .views import historic_fetch
+from .tasks import historic_fetch
 
 # Create your views here.
 
