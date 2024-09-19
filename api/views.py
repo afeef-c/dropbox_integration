@@ -398,24 +398,27 @@ def submit_form_data(request):
         'amount_to_charge_for_credit_card': amount_to_charge_for_credit_card,
         'card_holder_name': card_holder_name,
         'credit_card_number': credit_card_number,
-        'expiration_date': expiration_date,
         'billing_zip_code': billing_zip_code,
         'cvv': CVV,
         'amount_to_charge_for_zelle': amount_to_charge_for_zelle,
         'amount_to_charge_for_cash': amount_to_charge_for_cash,
         'amount_to_charge_for_check': amount_to_charge_for_check,
         'check_number': check_number,
-        'client_signature' : client_signature,
-        'representative_signature' : representative_signature,
-        'pdf' : agreement,
         'modified_at': submitted_at.date(),
     }
+    if expiration_date:
+        defaults['expiration_date'] = expiration_date
 
     if client_signature:
+        defaults['client_signature'] = client_signature
         defaults['client_signed_date'] = submitted_at.date()
 
     if representative_signature:
+        defaults['representative_signature'] = representative_signature
         defaults['representative_signed_date'] = submitted_at.date()
+    
+    if agreement:
+        defaults['pdf'] = agreement
 
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
