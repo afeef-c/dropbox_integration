@@ -186,6 +186,12 @@ def get_all_custom_fields(location_id):
        return None
     
 @api_view(['GET'])
+def current_client(request, project_id):
+    contact = Contact.objects.get(project_id=project_id)
+    serializer = ContactSerializer(contact)
+    return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+    
+@api_view(['GET'])
 def current_clients(request):
     limit = request.GET.get('limit', 10)
     offset = request.GET.get('offset', 0)
@@ -255,7 +261,7 @@ def submit_form_data(request):
     # Extract form data from the parsed JSON
     project_id = form_data.get('project_id')
     refferd_by = form_data.get('refferd_by')
-    client_name = form_data.get('client_name')
+    client_name = form_data.get('name')
     print(client_name)
     address = form_data.get('address')
     city = form_data.get('city')
@@ -267,21 +273,21 @@ def submit_form_data(request):
     secondary_email = form_data.get('secondary_email')
 
     # // Project Info
-    HOA = form_data.get('HOA')
+    HOA = form_data.get('hoa')
     plot_plan = form_data.get('plot_plan')
-    hardscape = form_data.get('hardscape')
-    hardscape_and_planning = form_data.get('hardscape_and_planning')
-    above_plans_plus = form_data.get('above_plans_plus')
+    hardscape = form_data.get('hardscape_2d_3d')
+    hardscape_and_planning = form_data.get('hardscape_and_planting')
+    above_plans_plus = form_data.get('above_plan_plus')
     measuring_for_site_plan = form_data.get('measuring_for_site_plan')
     property_droning = form_data.get('property_droning')
     property_survey = form_data.get('property_survey')
-    consultations_and_revisions_amount = form_data.get('consultations_and_revisions_amount')
+    consultations_and_revisions_amount = form_data.get('consultations_and_revisions_amount_hour')
     other = form_data.get('other')
     describe_other = form_data.get('describe_other')
     project_amount = form_data.get('project_amount')
 
     # // Billing Info
-    payment_options = form_data.get('payment_options')
+    payment_options = form_data.get('payment_option')
 
     # //credit card
     amount_to_charge_for_credit_card = form_data.get('amount_to_charge_for_credit_card')
@@ -289,7 +295,7 @@ def submit_form_data(request):
     credit_card_number = form_data.get('credit_card_number')
     expiration_date = form_data.get('expiration_date')
     billing_zip_code = form_data.get('billing_zip_code')
-    CVV = form_data.get('CVV')
+    CVV = form_data.get('cvv')
 
     # //zelle
     amount_to_charge_for_zelle = form_data.get('amount_to_charge_for_zelle')
