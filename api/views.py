@@ -210,8 +210,8 @@ def current_clients(request):
         search_lower = search.lower()
         all_contacts = all_contacts.filter(
             Q(name__istartswith=search_lower) |
-            Q(email__istartswith=search_lower) |
-            Q(phone__istartswith=search_lower)
+            Q(primary_email__istartswith=search_lower) |
+            Q(primary_phone__istartswith=search_lower)
         )
     else:
         all_contacts = all_contacts
@@ -789,7 +789,7 @@ def update_contact_representative_signatures(location_id, contact_id, representa
                         str(uuid.uuid4()): {
                             "meta": {
                                 "fieldname": representative_signature_cf,
-                                "originalname": 'client_signature',
+                                "originalname": 'representative_signature',
                                 "mimetype": "image/png",
                                 "uuid": str(uuid.uuid4())
                             },
