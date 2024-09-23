@@ -222,7 +222,45 @@ def current_clients(request):
 
     serializer = ContactSerializer(all_contacts, many=True)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])  # Enables file upload support
+def submit_client_signature(request):
+    form_data = request.data
     
+    client_signature = request.FILES.get('signature')
+    agreement = request.FILES.get('pdf')
+
+    project_id = form_data.get('project_id')
+
+    location = Location.objects.first()
+    location_id = location.locationId
+    location_timezone = location.timezone
+
+    timezone = pytz.timezone(location_timezone)
+    submitted_at = datetime.datetime.now(timezone).replace(tzinfo=None)
+
+    all_custom_fields = get_all_custom_fields(location_id)
+    for field in all_custom_fields:
+        if field['name'] == 'Client Signature':
+            client_signature_cf = field['id']
+        if field['name'] == 'Representative Signature':
+            representative_signature_cf = field['id']
+        if field['name'] == 'Agreement':
+            agreement_cf = field['id']
+
+    contact = Contact.objects.get(project_id=project_id)
+
+    contact.client_signature = client_signature
+    contact.client_signed_date = submitted_at.date()
+    contact.pdf = agreement
+    contact.save()
+
+    update_contact_file_customfields(location_id=location_id, contact_id=contact.contact_id, client_signature_cf=client_signature_cf, representative_signature_cf=representative_signature_cf, agreement_cf=agreement_cf)
+    serializer = ContactSerializer(contact)
+    return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_agreement(request):
@@ -259,10 +297,11 @@ def submit_form_data(request):
     agreement = request.FILES.get('pdf')
     
     # Extract form data from the parsed JSON
+    contact_id = form_data.get('contact_id')
     project_id = form_data.get('project_id')
+    print(project_id)
     refferd_by = form_data.get('refferd_by')
     client_name = form_data.get('name')
-    print(client_name)
     address = form_data.get('address')
     city = form_data.get('city')
     state = form_data.get('state')
@@ -429,16 +468,10 @@ def submit_form_data(request):
     location = Location.objects.get(locationId = location_id)
     access_token = location.access_token
 
-    if not project_id:
-        current_year = datetime.datetime.now().year
-        # Extract last two digits of the year
-        year_short = str(current_year)[-2:]
-        # Count the number of projects for the current year
-        project_count = Contact.objects.filter(project_id__startswith=year_short).count() + 1
-        # Generate project_id in the format YYYY-0001
-        project_id = f"{year_short}-{str(project_count).zfill(3)}"
-        print(project_id)
-        defaults['project_id'] = project_id
+    if not contact_id:
+
+        active_project_id = ActiveProjectID.objects.get(project_id=project_id)
+
         defaults['submitted_at'] = submitted_at.date()
         
         url = "https://services.leadconnectorhq.com/contacts/"
@@ -558,14 +591,16 @@ def submit_form_data(request):
                 defaults=defaults
             )
 
+            active_project_id.delete()
             print('contact created')
+            update_contact_file_customfields(location_id=location_id, contact_id=contact_id, client_signature_cf=client_signature_cf, representative_signature_cf=representative_signature_cf, agreement_cf=agreement_cf)
 
-            if client_signature:
-                update_contact_client_signatures(location_id, contact_id, client_signature_cf)
-            if representative_signature:
-                update_contact_representative_signatures(location_id, contact_id, representative_signature_cf)
-            if agreement:
-                update_contact_agreement(location_id, contact_id, agreement_cf)
+            # if client_signature:
+            #     update_contact_client_signatures(location_id, contact_id, client_signature_cf)
+            # if representative_signature:
+            #     update_contact_representative_signatures(location_id, contact_id, representative_signature_cf)
+            # if agreement:
+            #     update_contact_agreement(location_id, contact_id, agreement_cf)
             serializer = ContactSerializer(new_contact)
             return Response({'data': serializer.data}, status=status.HTTP_200_OK)
         else:
@@ -574,7 +609,7 @@ def submit_form_data(request):
             message = error_response.get('message')
             return Response(message, status=status.HTTP_400_BAD_REQUEST)
     else:
-        contact_id = Contact.objects.get(project_id=project_id).contact_id
+        contact_id = Contact.objects.get(contact_id=contact_id)
 
         url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
         headers = {
@@ -692,13 +727,15 @@ def submit_form_data(request):
                 contact_id=contact_id,
                 defaults=defaults
             )
+            
+            update_contact_file_customfields(location_id=location_id, contact_id=contact_id, client_signature_cf=client_signature_cf, representative_signature_cf=representative_signature_cf, agreement_cf=agreement_cf)
 
-            if client_signature:
-                update_contact_client_signatures(location_id, contact_id, client_signature_cf)
-            if representative_signature:
-                update_contact_representative_signatures(location_id, contact_id, representative_signature_cf)
-            if agreement:
-                update_contact_agreement(location_id, contact_id, agreement_cf)
+            # if client_signature:
+            #     update_contact_client_signatures(location_id, contact_id, client_signature_cf)
+            # if representative_signature:
+            #     update_contact_representative_signatures(location_id, contact_id, representative_signature_cf)
+            # if agreement:
+            #     update_contact_agreement(location_id, contact_id, agreement_cf)
 
             serializer = ContactSerializer(update_contact)
             return Response({'data': serializer.data}, status=status.HTTP_200_OK)
@@ -707,6 +744,94 @@ def submit_form_data(request):
             print(error_response)
             message = error_response.get('message')
             return Response(message, status=status.HTTP_400_BAD_REQUEST)
+        
+def update_contact_file_customfields(location_id, contact_id, client_signature_cf=None, representative_signature_cf=None, agreement_cf=None):
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+
+    location = Location.objects.get(locationId=location_id)
+    access_token = location.access_token
+
+    contact = Contact.objects.get(contact_id=contact_id)
+
+    custom_fields = []
+
+    # Add client signature if available
+    if client_signature_cf and contact.client_signature:
+        client_signature_link = f'{settings.BASE_URL}{contact.client_signature.url}'
+        custom_fields.append({
+            "id": client_signature_cf,
+            "field_value": {
+                str(uuid.uuid4()): {
+                    "meta": {
+                        "fieldname": client_signature_cf,
+                        "originalname": 'client_signature',
+                        "mimetype": "image/png",
+                        "uuid": str(uuid.uuid4())
+                    },
+                    "url": client_signature_link
+                }
+            }
+        })
+
+    # Add representative signature if available
+    if representative_signature_cf and contact.representative_signature:
+        representative_signature_link = f'{settings.BASE_URL}{contact.representative_signature.url}'
+        custom_fields.append({
+            "id": representative_signature_cf,
+            "field_value": {
+                str(uuid.uuid4()): {
+                    "meta": {
+                        "fieldname": representative_signature_cf,
+                        "originalname": 'representative_signature',
+                        "mimetype": "image/png",
+                        "uuid": str(uuid.uuid4())
+                    },
+                    "url": representative_signature_link
+                }
+            }
+        })
+
+    # Add agreement if available
+    if agreement_cf and contact.pdf:
+        agreement_link = f'{settings.BASE_URL}{contact.pdf.url}'
+        custom_fields.append({
+            "id": agreement_cf,
+            "field_value": {
+                str(uuid.uuid4()): {
+                    "meta": {
+                        "fieldname": agreement_cf,
+                        "originalname": f'{contact.name}_agreement.pdf',
+                        "mimetype": "application/pdf",
+                        "uuid": str(uuid.uuid4())
+                    },
+                    "url": agreement_link
+                }
+            }
+        })
+
+    # If there are any custom fields to update, make the API call
+    if custom_fields:
+        url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "Version": "2021-07-28"
+        }
+
+        data = {
+            "customFields": custom_fields
+        }
+
+        response = requests.put(url, headers=headers, json=data)
+        if response.ok:
+            print('Custom fields updated successfully')
+        else:
+            print('Failed to update custom fields')
+    else:
+        print('No custom fields to update')
         
 def update_contact_client_signatures(location_id, contact_id, client_signature_cf):
     check_is_token_expired = checking_token_expiration(location_id)
@@ -930,3 +1055,21 @@ def update_contact_agreement(location_id, contact_id, agreement_cf):
 def historic(request):
     historic_fetch.delay()
     return Response('started', status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def generate_project_id(request):
+    current_year = datetime.datetime.now().year
+    # Extract last two digits of the year
+    year_short = str(current_year)[-2:]
+    # Count the number of projects for the current year
+    project_count = Contact.objects.filter(project_id__startswith=year_short).count() + 1
+    # Generate project_id in the format YYYY-0001
+    project_id = f"{year_short}-{str(project_count).zfill(3)}"
+
+    while True:
+        if not ActiveProjectID.objects.filter(project_id=project_id).exists():
+            ActiveProjectID.objects.create(project_id=project_id)
+            return Response(project_id, status=status.HTTP_200_OK)
+        else:
+            project_count += 1
+            project_id = f"{year_short}-{str(project_count).zfill(3)}"

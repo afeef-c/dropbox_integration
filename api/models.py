@@ -58,3 +58,6 @@ class Contact(models.Model):
     modified_at = models.DateField(null=True, blank=True)
     representative_signed_date = models.DateField(null=True, blank=True)
     client_signed_date = models.DateField(null=True, blank=True)
+
+class ActiveProjectID(models.Model):
+    project_id = models.CharField(primary_key=True, max_length=700)
