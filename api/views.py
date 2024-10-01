@@ -20,6 +20,9 @@ import json
 from django.core.files.base import ContentFile
 import base64
 from io import BytesIO
+from django.core.files.storage import default_storage
+import os
+from PIL import Image
 
 # Create your views here.
 
@@ -481,10 +484,20 @@ def submit_form_data(request):
         current_year = datetime.datetime.now().year
         # Extract last two digits of the year
         year_short = str(current_year)[-2:]
-        # Count the number of projects for the current year
-        project_count = Contact.objects.filter(project_id__startswith=year_short).count() + 1
-        # Generate project_id in the format YYYY-0001
-        project_id = f"{year_short}-{str(project_count).zfill(3)}"
+        # Find the project with the largest sequence number for the current year
+        last_project = Contact.objects.filter(project_id__startswith=year_short).order_by('-project_id').first()
+
+        if last_project:
+            # Extract the sequence number from the project_id (e.g., 24-001 -> 001)
+            last_sequence = int(last_project.project_id.split('-')[1])
+            next_sequence = last_sequence + 1
+        else:
+            # If no project exists for the current year, start with 1
+            next_sequence = 1
+
+        # Generate the new project_id in the format YY-XXX
+        project_id = f"{year_short}-{str(next_sequence).zfill(3)}"
+
 
         defaults['project_id'] = project_id
         defaults['submitted_at'] = submitted_at.date()
@@ -1052,3 +1065,182 @@ def update_contact_agreement(location_id, contact_id, agreement_cf):
 def historic(request):
     historic_fetch.delay()
     return Response('started', status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])  # Enables file upload support
+def submit_agreement_v2(request):
+    # Extract form data
+    project_id = request.data.get('project_id')
+    # Extract files
+    agreement = request.FILES.get('pdf')
+
+    # contact = Contact.objects.get(project_id=project_id)
+    # contact_id = contact.contact_id
+    contact_id = 'sjxvbhnyc85y580azLgd'
+
+    # Define storage folder path
+    folder_path = os.path.join(settings.MEDIA_ROOT, 'agreements')
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    
+    # Get file extension to differentiate between image and PDF
+    file_extension = os.path.splitext(agreement.name)[1].lower()
+
+    if file_extension == '.pdf':
+        # If it's a PDF, create/overwrite the file in the folder
+        pdf_path = os.path.join(folder_path, f'agreement.pdf')
+        with default_storage.open(pdf_path, 'wb+') as destination:
+            for chunk in agreement.chunks():
+                destination.write(chunk)
+    
+    elif file_extension in ['.jpg', '.jpeg', '.png']:
+        # If it's an image, create/overwrite the image in the folder
+        image_path = os.path.join(folder_path, f'agreement_{project_id}{file_extension}')
+        with default_storage.open(image_path, 'wb+') as destination:
+            for chunk in agreement.chunks():
+                destination.write(chunk)
+
+        # Open and further process the image if needed
+        image = Image.open(image_path)
+        # You can modify or save the image as needed
+        # For example, resizing: image = image.resize((800, 600))
+        image.save(image_path)
+    
+    media_file = upload_media_file(contact_id)
+    if not media_file:
+        return Response('Failed to upload the media file', status=400)
+
+    file_details = get_media_file(contact_id, media_file)
+    if not file_details:
+        return Response('Failed to get file details', status=400)
+
+    upload_agreement = upload_file(contact_id, file_details['file_link'], file_details['file_name'])
+    if upload_agreement:
+        return Response('success', status=200)
+    else:
+        return Response('Failed to upload the file to CF', status=400)
+
+
+def upload_media_file(contact_id):
+    location = Location.objects.first()
+    location_id = location.locationId
+
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+
+    location = Location.objects.get(locationId=location_id)
+    access_token = location.access_token
+
+    url = 'https://services.leadconnectorhq.com/medias/upload-file'
+    headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {access_token}',
+        'version': '2021-07-28'
+    }
+
+    files = {
+        'file': (f'{contact_id}_agreement.pdf', open(str(settings.BASE_DIR) + f'/media/agreements/agreement.pdf', 'rb'))
+    }
+
+    response = requests.post(url, headers=headers, files=files)
+    if response.status_code == 201:
+        data = response.json()
+        return data['fileId']
+    else:
+        print(response.json())
+        return False
+
+def get_media_file(location_id, contact_id, media_file):
+    location = Location.objects.first()
+    location_id = location.locationId
+
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+
+    location = Location.objects.get(locationId=location_id)
+    access_token = location.access_token
+
+    url = 'https://services.leadconnectorhq.com/medias/files'
+    params = {
+        'sortBy': 'createdAt',
+        'sortOrder': 'desc',
+        'altType': 'location',
+        'altId': media_file,
+        'query': f'{contact_id}_agreement.pdf'
+    }
+
+    headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {access_token}',
+        'version': '2021-07-28'
+    }
+
+    response = requests.get(url, headers=headers, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        file = data['files'][0]
+        print(file)
+        return{
+            "file_name": file['name'],
+            "file_link": file['url']
+        }
+    else:
+        return False
+    
+def upload_file(contact_id, file_link, file_name):
+    location = Location.objects.first()
+    location_id = location.locationId
+
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+
+    location = Location.objects.get(locationId=location_id)
+    access_token = location.access_token
+
+    all_custom_fields = get_all_custom_fields(location_id)
+    for field in all_custom_fields:
+        if field['name'] == 'Agreement':
+            agreement_cf = field['id']
+
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Version": "2021-07-28",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+
+    file_uuid = uuid.uuid4()
+    
+    payload = {
+        "customFields": [
+            {
+                "id": agreement_cf,
+                "field_value": {
+                    str(file_uuid): {
+                        "meta": {
+                            "fieldname": agreement_cf,
+                            "originalname": file_name,
+                            "mimetype": "application/pdf",
+                            "uuid": str(file_uuid)
+                        },
+                        "url": file_link
+                    }
+                }
+            }
+            
+        ]
+    }
+
+    response = requests.put(url, json=payload, headers=headers)
+
+    if response.status_code == 200:        
+        return True
+    else:
+        print("Error occured while uploading file to custom field")
+        print(response.json())
+        return False

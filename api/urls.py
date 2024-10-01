@@ -10,4 +10,6 @@ urlpatterns = [
     path('current_clients', current_clients, name='current_clients'),
     path('current_client/<str:project_id>', current_client, name='current_client'),
     path('historic', historic, name='historic'),
+
+    path('submit_agreement_v2', submit_agreement_v2, name='submit_agreement_v2'),
 ]
