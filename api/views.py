@@ -461,15 +461,15 @@ def submit_form_data(request):
         defaults['expiration_date'] = expiration_date
 
     if client_signature:
-        defaults['client_signature'] = client_signature
+        # defaults['client_signature'] = client_signature
         defaults['client_signed_date'] = submitted_at.date()
 
     if representative_signature:
-        defaults['representative_signature'] = representative_signature
+        # defaults['representative_signature'] = representative_signature
         defaults['representative_signed_date'] = submitted_at.date()
     
-    if agreement:
-        defaults['pdf'] = agreement
+    # if agreement:
+    #     defaults['pdf'] = agreement
 
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -1073,55 +1073,89 @@ def submit_agreement_v2(request):
     project_id = request.data.get('project_id')
     # Extract files
     agreement = request.FILES.get('pdf')
+    client_signature = request.FILES.get('signature')
+    representative_signature = request.FILES.get('representative_sign')
 
-    # contact = Contact.objects.get(project_id=project_id)
-    # contact_id = contact.contact_id
-    contact_id = 'sjxvbhnyc85y580azLgd'
+    contact = Contact.objects.get(project_id=project_id)
+    contact_id = contact.contact_id
+    # contact_id = 'sjxvbhnyc85y580azLgd'
 
     # Define storage folder path
-    folder_path = os.path.join(settings.MEDIA_ROOT, 'agreements')
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
+    agreement_folder_path = os.path.join(settings.MEDIA_ROOT, 'agreements')
+    signature_folder_path = os.path.join(settings.MEDIA_ROOT, 'signatures')
+    if not os.path.exists(agreement_folder_path):
+        os.makedirs(agreement_folder_path)
+    if not os.path.exists(signature_folder_path):
+        os.makedirs(signature_folder_path)
     
-    # Get file extension to differentiate between image and PDF
-    file_extension = os.path.splitext(agreement.name)[1].lower()
 
-    if file_extension == '.pdf':
-        # If it's a PDF, create/overwrite the file in the folder
-        pdf_path = os.path.join(folder_path, f'agreement.pdf')
-        with default_storage.open(pdf_path, 'wb+') as destination:
-            for chunk in agreement.chunks():
-                destination.write(chunk)
-    
-    elif file_extension in ['.jpg', '.jpeg', '.png']:
-        # If it's an image, create/overwrite the image in the folder
-        image_path = os.path.join(folder_path, f'agreement_{project_id}{file_extension}')
-        with default_storage.open(image_path, 'wb+') as destination:
-            for chunk in agreement.chunks():
-                destination.write(chunk)
+    # If it's a PDF, create/overwrite the file in the folder
+    pdf_path = os.path.join(agreement_folder_path, f'agreement.pdf')
+    with default_storage.open(pdf_path, 'wb+') as destination:
+        for chunk in agreement.chunks():
+            destination.write(chunk)
 
-        # Open and further process the image if needed
-        image = Image.open(image_path)
-        # You can modify or save the image as needed
-        # For example, resizing: image = image.resize((800, 600))
-        image.save(image_path)
-    
-    media_file = upload_media_file(contact_id)
-    if not media_file:
+    agreement_file = upload_agreement_file(contact_id)
+    if not agreement_file:
         return Response('Failed to upload the media file', status=400)
 
-    file_details = get_media_file(contact_id, media_file)
-    if not file_details:
+    agreement_file_details = get_agreement_file(contact_id, agreement_file)
+    if not agreement_file_details:
         return Response('Failed to get file details', status=400)
+    
+    if client_signature:
+        client_signature_path = os.path.join(signature_folder_path, f'client_signature.png')
+        with default_storage.open(client_signature_path, 'wb+') as destination:
+            for chunk in client_signature.chunks():
+                destination.write(chunk)
+        
+        client_signature_file_name = 'client_signature.png'
+        client_signature_file = upload_signature_file(contact_id, client_signature_file_name)
+        if not client_signature_file:
+            return Response('Failed to upload the client_signature file', status=400)
 
-    upload_agreement = upload_file(contact_id, file_details['file_link'], file_details['file_name'])
-    if upload_agreement:
-        return Response('success', status=200)
+        client_signature_details = get_signature_file(contact_id, client_signature_file, client_signature_file_name)
+        if not client_signature_details:
+            return Response('Failed to get client_signature file details', status=400)
+
+    if representative_signature:
+        representative_signature_path = os.path.join(signature_folder_path, f'representative_signature.png')
+        with default_storage.open(representative_signature_path, 'wb+') as destination:
+            for chunk in representative_signature.chunks():
+                destination.write(chunk)
+
+        representative_signature_file_name = 'representative_signature.png'
+        representative_signature_file = upload_signature_file(contact_id, representative_signature_file_name)
+        if not representative_signature_file:
+            return Response('Failed to upload the representative_signature file', status=400)
+
+        representative_signature_details = get_signature_file(contact_id, representative_signature_file, representative_signature_file_name)
+        if not representative_signature_details:
+            return Response('Failed to get representative_signature file details', status=400)
+
+    try:
+        client_signature_link = client_signature_details['file_link']
+    except:
+        client_signature_link = None
+
+    try:
+        representative_signature_link = representative_signature_details['file_link']
+    except:
+        representative_signature_link = None
+
+    upload_cf_files = update_contact_file_customfields_v2(contact_id, agreement_file_details['file_link'], client_signature_link, representative_signature_link)
+    if upload_cf_files:
+        contact.client_signature_url = client_signature_link
+        contact.representative_signature_url = representative_signature_link
+        contact.pdf_url = agreement_file_details['file_link']
+        contact.save()
+        serializer = ContactSerializerV2(contact)
+        return Response({'data': serializer.data}, status=status.HTTP_200_OK)
     else:
-        return Response('Failed to upload the file to CF', status=400)
+        return Response('Failed to upload the files to CF', status=400)
 
 
-def upload_media_file(contact_id):
+def upload_agreement_file(contact_id):
     location = Location.objects.first()
     location_id = location.locationId
 
@@ -1151,7 +1185,7 @@ def upload_media_file(contact_id):
         print(response.json())
         return False
 
-def get_media_file(location_id, contact_id, media_file):
+def get_agreement_file(contact_id, media_file):
     location = Location.objects.first()
     location_id = location.locationId
 
@@ -1189,7 +1223,7 @@ def get_media_file(location_id, contact_id, media_file):
     else:
         return False
     
-def upload_file(contact_id, file_link, file_name):
+def upload_signature_file(contact_id, filename):
     location = Location.objects.first()
     location_id = location.locationId
 
@@ -1200,10 +1234,136 @@ def upload_file(contact_id, file_link, file_name):
     location = Location.objects.get(locationId=location_id)
     access_token = location.access_token
 
+    url = 'https://services.leadconnectorhq.com/medias/upload-file'
+    headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {access_token}',
+        'version': '2021-07-28'
+    }
+
+    files = {
+        'file': (f'{contact_id}_{filename}', open(str(settings.BASE_DIR) + f'/media/signatures/{filename}', 'rb'))
+    }
+
+    response = requests.post(url, headers=headers, files=files)
+    if response.status_code == 201:
+        data = response.json()
+        return data['fileId']
+    else:
+        print(response.json())
+        return False
+
+def get_signature_file(contact_id, media_file, filename):
+    location = Location.objects.first()
+    location_id = location.locationId
+
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+
+    location = Location.objects.get(locationId=location_id)
+    access_token = location.access_token
+
+    url = 'https://services.leadconnectorhq.com/medias/files'
+    params = {
+        'sortBy': 'createdAt',
+        'sortOrder': 'desc',
+        'altType': 'location',
+        'altId': media_file,
+        'query': f'{contact_id}_{filename}'
+    }
+
+    headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {access_token}',
+        'version': '2021-07-28'
+    }
+
+    response = requests.get(url, headers=headers, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        file = data['files'][0]
+        print(file)
+        return{
+            "file_name": file['name'],
+            "file_link": file['url']
+        }
+    else:
+        return False
+    
+def update_contact_file_customfields_v2(contact_id, agreement_file_link, client_signature_link, representative_signature_link):
+    location = Location.objects.first()
+    location_id = location.locationId
+
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+
+    location = Location.objects.get(locationId=location_id)
+    access_token = location.access_token
+
+    contact = Contact.objects.get(contact_id=contact_id)
+
     all_custom_fields = get_all_custom_fields(location_id)
     for field in all_custom_fields:
+        if field['name'] == 'Client Signature':
+            client_signature_cf = field['id']
+        if field['name'] == 'Representative Signature':
+            representative_signature_cf = field['id']
         if field['name'] == 'Agreement':
             agreement_cf = field['id']
+    
+    custom_fields = [
+        {
+            "id": agreement_cf,
+            "field_value": {
+                str(uuid.uuid4()): {
+                    "meta": {
+                        "fieldname": agreement_cf,
+                        "originalname": f'{contact.name}_agreement.pdf',
+                        "mimetype": "application/pdf",
+                        "uuid": str(uuid.uuid4())
+                    },
+                    "url": agreement_file_link
+                }
+            }
+        }
+        
+    ]
+
+    if client_signature_link:
+        custom_fields.append({
+            "id": client_signature_cf,
+            "field_value": {
+                str(uuid.uuid4()): {
+                    "meta": {
+                        "fieldname": client_signature_cf,
+                        "originalname": 'client_signature',
+                        "mimetype": "image/png",
+                        "uuid": str(uuid.uuid4())
+                    },
+                    "url": client_signature_link
+                }
+            }
+        })
+
+    if representative_signature_link:
+        custom_fields.append({
+            "id": representative_signature_cf,
+            "field_value": {
+                str(uuid.uuid4()): {
+                    "meta": {
+                        "fieldname": representative_signature_cf,
+                        "originalname": 'representative_signature',
+                        "mimetype": "image/png",
+                        "uuid": str(uuid.uuid4())
+                    },
+                    "url": representative_signature_link
+                }
+            }
+        })
+
+
 
     url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
 
@@ -1214,29 +1374,12 @@ def upload_file(contact_id, file_link, file_name):
         "Accept": "application/json"
     }
 
-    file_uuid = uuid.uuid4()
     
-    payload = {
-        "customFields": [
-            {
-                "id": agreement_cf,
-                "field_value": {
-                    str(file_uuid): {
-                        "meta": {
-                            "fieldname": agreement_cf,
-                            "originalname": file_name,
-                            "mimetype": "application/pdf",
-                            "uuid": str(file_uuid)
-                        },
-                        "url": file_link
-                    }
-                }
-            }
-            
-        ]
+    data = {
+        "customFields": custom_fields
     }
 
-    response = requests.put(url, json=payload, headers=headers)
+    response = requests.put(url, json=data, headers=headers)
 
     if response.status_code == 200:        
         return True
