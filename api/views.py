@@ -1387,3 +1387,70 @@ def update_contact_file_customfields_v2(contact_id, agreement_file_link, client_
         print("Error occured while uploading file to custom field")
         print(response.json())
         return False
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])  # Enables file upload support
+def submit_client_signature_v2(request):
+    form_data = request.data
+    
+    client_signature = request.FILES.get('signature')
+    agreement = request.FILES.get('pdf')
+
+    project_id = form_data.get('project_id')
+
+    contact = Contact.objects.get(project_id=project_id)
+    contact_id = contact.contact_id
+
+    agreement_folder_path = os.path.join(settings.MEDIA_ROOT, 'agreements')
+    signature_folder_path = os.path.join(settings.MEDIA_ROOT, 'signatures')
+    if not os.path.exists(agreement_folder_path):
+        os.makedirs(agreement_folder_path)
+    if not os.path.exists(signature_folder_path):
+        os.makedirs(signature_folder_path)
+
+    # If it's a PDF, create/overwrite the file in the folder
+    pdf_path = os.path.join(agreement_folder_path, f'agreement.pdf')
+    with default_storage.open(pdf_path, 'wb+') as destination:
+        for chunk in agreement.chunks():
+            destination.write(chunk)
+
+    agreement_file = upload_agreement_file(contact_id)
+    if not agreement_file:
+        return Response('Failed to upload the media file', status=400)
+
+    agreement_file_details = get_agreement_file(contact_id, agreement_file)
+    if not agreement_file_details:
+        return Response('Failed to get file details', status=400)
+    
+    if client_signature:
+        client_signature_path = os.path.join(signature_folder_path, f'client_signature.png')
+        with default_storage.open(client_signature_path, 'wb+') as destination:
+            for chunk in client_signature.chunks():
+                destination.write(chunk)
+        
+        client_signature_file_name = 'client_signature.png'
+        client_signature_file = upload_signature_file(contact_id, client_signature_file_name)
+        if not client_signature_file:
+            return Response('Failed to upload the client_signature file', status=400)
+
+        client_signature_details = get_signature_file(contact_id, client_signature_file, client_signature_file_name)
+        if not client_signature_details:
+            return Response('Failed to get client_signature file details', status=400)
+        
+    try:
+        client_signature_link = client_signature_details['file_link']
+    except:
+        client_signature_link = None
+
+    representative_signature_link=None
+
+    upload_cf_files = update_contact_file_customfields_v2(contact_id, agreement_file_details['file_link'], client_signature_link, representative_signature_link)
+    if upload_cf_files:
+        contact.client_signature_url = client_signature_link
+        contact.pdf_url = agreement_file_details['file_link']
+        contact.save()
+        serializer = ContactSerializerV2(contact)
+        return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+    else:
+        return Response('Failed to upload the files to CF', status=400)
