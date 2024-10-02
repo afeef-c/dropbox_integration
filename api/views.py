@@ -1069,6 +1069,7 @@ def historic(request):
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_agreement_v2(request):
+    print(request.data)
     # Extract form data
     project_id = request.data.get('project_id')
     # Extract files
