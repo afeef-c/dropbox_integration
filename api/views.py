@@ -460,11 +460,11 @@ def submit_form_data(request):
     if expiration_date:
         defaults['expiration_date'] = expiration_date
 
-    if client_signature:
+    if client_signature and client_signature != 'null':
         # defaults['client_signature'] = client_signature
         defaults['client_signed_date'] = submitted_at.date()
 
-    if representative_signature:
+    if representative_signature and representative_signature != 'null':
         # defaults['representative_signature'] = representative_signature
         defaults['representative_signed_date'] = submitted_at.date()
     
@@ -1104,7 +1104,7 @@ def submit_agreement_v2(request):
     if not agreement_file_details:
         return Response('Failed to get file details', status=400)
     
-    if client_signature:
+    if client_signature and client_signature != 'null':
         client_signature_path = os.path.join(signature_folder_path, f'client_signature.png')
         with default_storage.open(client_signature_path, 'wb+') as destination:
             for chunk in client_signature.chunks():
@@ -1119,7 +1119,7 @@ def submit_agreement_v2(request):
         if not client_signature_details:
             return Response('Failed to get client_signature file details', status=400)
 
-    if representative_signature:
+    if representative_signature and representative_signature != 'null':
         representative_signature_path = os.path.join(signature_folder_path, f'representative_signature.png')
         with default_storage.open(representative_signature_path, 'wb+') as destination:
             for chunk in representative_signature.chunks():
@@ -1424,7 +1424,7 @@ def submit_client_signature_v2(request):
     if not agreement_file_details:
         return Response('Failed to get file details', status=400)
     
-    if client_signature:
+    if client_signature and client_signature != 'null':
         client_signature_path = os.path.join(signature_folder_path, f'client_signature.png')
         with default_storage.open(client_signature_path, 'wb+') as destination:
             for chunk in client_signature.chunks():
