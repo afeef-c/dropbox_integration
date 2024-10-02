@@ -191,7 +191,7 @@ def get_all_custom_fields(location_id):
 @api_view(['GET'])
 def current_client(request, project_id):
     contact = Contact.objects.get(project_id=project_id)
-    serializer = ContactSerializer(contact)
+    serializer = ContactSerializerV2(contact)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
     
 @api_view(['GET'])
@@ -223,7 +223,7 @@ def current_clients(request):
     if offset or limit:
         all_contacts = all_contacts[offset:offset + limit]
 
-    serializer = ContactSerializer(all_contacts, many=True)
+    serializer = ContactSerializerV2(all_contacts, many=True)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
@@ -260,7 +260,7 @@ def submit_client_signature(request):
     contact.save()
 
     update_contact_file_customfields(location_id=location_id, contact_id=contact.contact_id, client_signature_cf=client_signature_cf, representative_signature_cf=representative_signature_cf, agreement_cf=agreement_cf)
-    serializer = ContactSerializer(contact)
+    serializer = ContactSerializerV2(contact)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
 
@@ -288,7 +288,7 @@ def submit_agreement(request):
             agreement_cf = field['id']
 
     update_contact_file_customfields(location_id=location_id, contact_id=contact_id, client_signature_cf=client_signature_cf, representative_signature_cf=representative_signature_cf, agreement_cf=agreement_cf)
-    serializer = ContactSerializer(contact)
+    serializer = ContactSerializerV2(contact)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
 def _decode_base64_image(base64_str):
@@ -620,7 +620,7 @@ def submit_form_data(request):
             )
 
             print('contact created')
-            serializer = ContactSerializer(new_contact)
+            serializer = ContactSerializerV2(new_contact)
             return Response({'data': serializer.data}, status=status.HTTP_200_OK)
         else:
             error_response = response.json()
@@ -747,7 +747,7 @@ def submit_form_data(request):
                 defaults=defaults
             )
             
-            serializer = ContactSerializer(update_contact)
+            serializer = ContactSerializerV2(update_contact)
             return Response({'data': serializer.data}, status=status.HTTP_200_OK)
         else:
             error_response = response.json()
