@@ -12,4 +12,5 @@ urlpatterns = [
     path('historic', historic, name='historic'),
 
     path('submit_agreement_v2', submit_agreement_v2, name='submit_agreement_v2'),
+    path('delete_current_client/<str:project_id>', delete_current_client, name='delete_current_client'),
 ]

@@ -418,6 +418,8 @@ def submit_form_data(request):
             agreement_cf = field['id']
         if field['name'] == 'ReferredBy':
             refferd_by_cf = field['id']
+        if field['name'] == 'Client Signature Form Link':
+            client_signature_form_link_cf = field['id']
 
     defaults = {
         'project_id' : project_id,
@@ -497,6 +499,8 @@ def submit_form_data(request):
 
         # Generate the new project_id in the format YY-XXX
         project_id = f"{year_short}-{str(next_sequence).zfill(3)}"
+
+        client_signature_form_link = f'https://main.d2f78myqkxzqx9.amplifyapp.com/client-signature/{project_id}'
 
 
         defaults['project_id'] = project_id
@@ -601,6 +605,10 @@ def submit_form_data(request):
                 {
                     "id": check_number_cf,
                     "field_value": check_number
+                },
+                {
+                    "id": client_signature_form_link_cf,
+                    "field_value": client_signature_form_link
                 }
             ]
         }
@@ -628,6 +636,7 @@ def submit_form_data(request):
             message = error_response.get('message')
             return Response(message, status=status.HTTP_400_BAD_REQUEST)
     else:
+        client_signature_form_link = f'https://main.d2f78myqkxzqx9.amplifyapp.com/client-signature/{project_id}'
         contact_id = Contact.objects.get(project_id=project_id).contact_id
 
         url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
@@ -725,6 +734,10 @@ def submit_form_data(request):
                 {
                     "id": check_number_cf,
                     "field_value": check_number
+                },
+                {
+                    "id": client_signature_form_link_cf,
+                    "field_value": client_signature_form_link
                 }
             ]
         }
@@ -1455,3 +1468,8 @@ def submit_client_signature_v2(request):
         return Response({'data': serializer.data}, status=status.HTTP_200_OK)
     else:
         return Response('Failed to upload the files to CF', status=400)
+
+@api_view(['POST'])
+def delete_current_client(request, project_id):
+    Contact.objects.get(project_id=project_id).delete()
+    return Response('success', status=status.HTTP_200_OK)
