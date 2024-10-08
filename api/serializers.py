@@ -44,7 +44,6 @@ class ContactSerializerV2(serializers.ModelSerializer):
     client_signature_url = serializers.SerializerMethodField()
     representative_signature_url = serializers.SerializerMethodField()
     pdf_url = serializers.SerializerMethodField()
-    expiration_date = serializers.SerializerMethodField()
 
     class Meta:
         model = Contact
