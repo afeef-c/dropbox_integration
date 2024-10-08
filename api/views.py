@@ -207,7 +207,7 @@ def current_clients(request):
     start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
     end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
 
-    all_contacts = Contact.objects.filter(submitted_at__range=[start_date, end_date]).order_by('-project_id')
+    all_contacts = Contact.objects.filter(submitted_at__range=[start_date, end_date], archived=False).order_by('-project_id')
 
     if search:
         search_lower = search.lower()
@@ -460,7 +460,14 @@ def submit_form_data(request):
         'modified_at': submitted_at.date(),
     }
     if expiration_date:
-        defaults['expiration_date'] = expiration_date
+        try:
+            defaults['expiration_date'] = expiration_date
+        except:
+            pass
+        try:
+            defaults['expiration_date_str'] = expiration_date
+        except:
+            pass
 
     if client_signature and client_signature != 'null':
         # defaults['client_signature'] = client_signature
@@ -1471,5 +1478,7 @@ def submit_client_signature_v2(request):
 
 @api_view(['POST'])
 def delete_current_client(request, project_id):
-    Contact.objects.get(project_id=project_id).delete()
+    contact = Contact.objects.get(project_id=project_id)
+    contact.archived = True
+    contact.save()
     return Response('success', status=status.HTTP_200_OK)

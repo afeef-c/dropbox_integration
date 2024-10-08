@@ -45,6 +45,7 @@ class Contact(models.Model):
     card_holder_name = models.CharField(max_length=700, null=True, blank=True)
     credit_card_number = models.CharField(max_length=700, null=True, blank=True)
     expiration_date = models.DateField(null=True, blank=True)
+    expiration_date_str = models.CharField(max_length=700, null=True, blank=True)
     billing_zip_code = models.CharField(max_length=700, null=True, blank=True)
     cvv = models.CharField(max_length=700, null=True, blank=True)
     amount_to_charge_for_zelle = models.FloatField(null=True, blank=True)
@@ -61,3 +62,5 @@ class Contact(models.Model):
     modified_at = models.DateField(null=True, blank=True)
     representative_signed_date = models.DateField(null=True, blank=True)
     client_signed_date = models.DateField(null=True, blank=True)
+    client_signed_date = models.DateField(null=True, blank=True)
+    archived = models.BooleanField(default=False)
