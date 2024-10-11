@@ -426,9 +426,9 @@ def fetch_users_by_location(self, location_id, *args):
 def create_all_task(self, contact_id, *args):
     
     tasks = [
-        {"task_name": "Contract signed & numbered", "assigned_to": ["Courtney Smith, Debra Leonardo, Mike Koppenhaver"]},
+        {"task_name": "Contract signed & numbered", "assigned_to": ["Courtney Smith", "Debra Leonardo", "Mike Koppenhaver"]},
         {"task_name": "Project added to Dropbox", "assigned_to": []},
-        {"task_name": "Emailed to PM & Office", "assigned_to": ["Courtney Smith, Debra Leonardo"]},
+        {"task_name": "Emailed to PM & Office", "assigned_to": ["Courtney Smith", "Debra Leonardo"]},
         {"task_name": "PM to call client for intro", "assigned_to": ["Julian Terrazas"]},
         {"task_name": "Initial payment captured", "assigned_to": []},
         {"task_name": "Design notes added to Dropbox", "assigned_to": []},
