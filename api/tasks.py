@@ -377,5 +377,213 @@ def refreshing_tokens(location_id):
     else:
         return False
 
-          
-        
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def fetch_users_by_location(self, location_id, *args):
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+    
+    location = Location.objects.get(locationId = location_id) 
+    access_token = location.access_token
+
+    url = 'https://services.leadconnectorhq.com/users/'
+    params = {'locationId': location_id}
+    headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {access_token}',
+        'Version': '2021-07-28'
+    }
+
+    response = requests.get(url, params=params, headers=headers)
+
+    # Check if the request was successful (status code 200)
+    if response.status_code == 200:
+        data = response.json()
+        users = data.get('users')
+        for user in users:
+            user_id = user['id']
+            first_name = user.get('firstName')
+            last_name = user.get('lastName')
+            email = user.get('email')
+            phone = user.get('phone')
+            full_name = f'{first_name} {last_name}'
+            print(f'{full_name} ({email})')
+            try:
+                db_user = User.objects.get(user_id=user_id)
+                db_user.name = full_name
+                db_user.email = email
+                db_user.phone = phone
+                db_user.save()
+            except:
+                db_user = User.objects.create(user_id=user_id, email=email, name=full_name, phone=phone)
+            db_user.save()
+
+            print('user created/updated')
+    
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def create_all_task(self, contact_id, *args):
+    
+    tasks = [
+        {"task_name": "Contract signed & numbered", "assigned_to": ["Courtney Smith, Debra Leonardo, Mike Koppenhaver"]},
+        {"task_name": "Project added to Dropbox", "assigned_to": []},
+        {"task_name": "Emailed to PM & Office", "assigned_to": ["Courtney Smith, Debra Leonardo"]},
+        {"task_name": "PM to call client for intro", "assigned_to": ["Julian Terrazas"]},
+        {"task_name": "Initial payment captured", "assigned_to": []},
+        {"task_name": "Design notes added to Dropbox", "assigned_to": []},
+        {"task_name": "HOA Guidelines captured", "assigned_to": []},
+        {"task_name": "Questionnaire captured", "assigned_to": []},
+        {"task_name": "House plans scanned (if applicable)", "assigned_to": []},
+        {"task_name": "Get Setbacks", "assigned_to": []},
+        {"task_name": "Schedule measure", "assigned_to": []},
+        {"task_name": "Measure/Prop Pics/Aerials", "assigned_to": []},
+        {"task_name": "Site plan completed", "assigned_to": ["Mike Koppenhaver"]},
+        {"task_name": "Monitor progress", "assigned_to": []},
+        {"task_name": "Track expenses", "assigned_to": []},
+        {"task_name": "Evaluate progress", "assigned_to": []},
+        {"task_name": "Address risks", "assigned_to": []},
+        {"task_name": "Design review with sales as needed", "assigned_to": []},
+        {"task_name": "House created in Structure Studio", "assigned_to": []},
+        {"task_name": "Design review with client", "assigned_to": []},
+        {"task_name": "HP Created", "assigned_to": []},
+        {"task_name": "Hardscape numbers", "assigned_to": []},
+        {"task_name": "Hardscape Prelim", "assigned_to": []},
+        {"task_name": "Revisions 1", "assigned_to": []},
+        {"task_name": "Revisions 2", "assigned_to": []},
+        {"task_name": "Revisions 3 (If needed/Hourly rates apply)", "assigned_to": []},
+        {"task_name": "HP Sign-Off (Notify Office & PP)", "assigned_to": ["Debra Leonardo"]},
+        {"task_name": "HP Created for PP", "assigned_to": ["Courtney Smith"]},
+        {"task_name": "HP Payment captured", "assigned_to": []},
+        {"task_name": "Initial call to client", "assigned_to": []},
+        {"task_name": "PP created", "assigned_to": []},
+        {"task_name": "PP meeting with client", "assigned_to": []},
+        {"task_name": "Revisions 1", "assigned_to": []},
+        {"task_name": "Revisions 2", "assigned_to": []},
+        {"task_name": "Revisions 3 (If needed/Hourly rates apply)", "assigned_to": []},
+        {"task_name": "PP Sign-Off (Notify office)", "assigned_to": ["Debra Leonardo"]},
+        {"task_name": "PP payment captured", "assigned_to": []},
+        {"task_name": "Layout Final set of plans on Borders", "assigned_to": ["Courtney Smith"]},
+        {"task_name": "Notify Designer to create Final HP (Callouts/totals/screenshots)", "assigned_to": []},
+        {"task_name": "Hardscape created (Notify PM)", "assigned_to": []},
+        {"task_name": "Assign Tech Sheets to Designer (PM to notify)", "assigned_to": []},
+        {"task_name": "Create Irrigation", "assigned_to": []},
+        {"task_name": "Create Drainage", "assigned_to": []},
+        {"task_name": "Create Lighting", "assigned_to": []},
+        {"task_name": "QC Tech sheets (Notify PM & Gio)", "assigned_to": ["Gio Leonardo"]},
+        {"task_name": "PM to notify Gio for Final", "assigned_to": []},
+        {"task_name": "Schedule client for Final", "assigned_to": []},
+        {"task_name": "Final plan presentation", "assigned_to": ["Debra Leonardo"]},
+        {"task_name": "Final payment captured", "assigned_to": []},
+        {"task_name": "Digital copies sent to client", "assigned_to": []}
+    ]
+    contact = Contact.objects.get(contact_id=contact_id)
+    location_id = contact.location_id
+    location_timezone = Location.objects.get(locationId = location_id).timezone
+    
+    current_datetime = datetime.datetime.now(datetime.timezone.utc)
+    # Add 90 days to submitted_at
+    ninety_days_later = current_datetime + datetime.timedelta(days=90)
+    # Replace time part with 23:59:59
+    ninety_days_later = ninety_days_later.replace(hour=23, minute=59, second=59)
+    # Stringify in the format "YYYY-MM-DDTHH:MM:SSZ"
+    due_date = ninety_days_later.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    try:
+        naive_due_date = datetime.datetime.fromisoformat(due_date[:-1])
+    except:
+        try:
+            naive_due_date = datetime.datetime.strptime(due_date, '%Y-%m-%dT%H:%M:%S')
+        except:
+            naive_due_date = datetime.datetime.strptime(due_date, '%Y-%m-%d')
+
+    input_timezone = pytz.timezone("UTC")
+    due_date_obj = input_timezone.localize(naive_due_date)
+    target_timezone = pytz.timezone(location_timezone)
+    due_date_in_location_time_zone = due_date_obj.astimezone(target_timezone).replace(tzinfo=None).date()
+
+
+    for task in tasks:
+        task_name = task['task_name']
+        if not Task.objects.filter(contact=contact, name=task_name).exists():
+            assigned_to_list = task['assigned_to']
+            if assigned_to_list:
+                if len(assigned_to_list) > 1:
+                    list_lenght = len(assigned_to_list)
+                    # Fetch previous task assignments for the current task name
+                    previous_task_assignments = Task.objects.filter(name=task_name).order_by('-created_at')
+
+                    # Determine the last assigned user
+                    last_assigned_user = None
+                    if previous_task_assignments.exists():
+                        last_assigned_user = previous_task_assignments.first().assigned_to
+                    
+                    if last_assigned_user:
+                        # Get the index of the last assigned user
+                        last_user_index = assigned_to_list.index(last_assigned_user) if last_assigned_user in assigned_to_list else -1
+                        # Calculate the next user index in round-robin fashion
+                        next_user_index = (last_user_index + 1) % len(assigned_to_list)
+                        assigned_user_name = assigned_to_list[next_user_index]
+                    else:
+                        # If no previous assignments exist, assign to the first user
+                        assigned_user_name = assigned_to_list[0]
+                else:
+                    assigned_user_name = assigned_to_list[0]
+            else:
+                assigned_user_name = 'Gio Leonardo'
+
+            user_id = User.objects.get(name=assigned_user_name)
+
+            new_task = create_task(location_id, contact_id, task_name, user_id, due_date)
+            if new_task:
+                task_id = new_task['id']
+
+                Task.objects.update_or_create(
+                    task_id = task_id,
+                    contact = contact,
+                    name = task_name,
+                    defaults={
+                        'assigned_to_id' : user_id,
+                        'assigned_to' : assigned_user_name,
+                        'due_date' : due_date_in_location_time_zone
+                    }
+                )
+
+                print(f'{task_name} task added')
+            else:
+                print(f'Failed to create the {task_name} task for {contact.name}')
+        else:
+            print(f'{task_name} task already added')
+            
+def create_task(location_id, contact_id, task_name, user_id, due_date):
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+
+    location = Location.objects.get(locationId = location_id)
+    access_token = location.access_token
+
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}/tasks"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Version": "2021-07-28"
+    }
+    payload = {
+        "title": task_name,
+        "dueDate": due_date,
+        "completed": False,
+        "assignedTo": user_id
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    if response.ok:
+        data = response.json()
+        task = data['task']
+        return task
+    else:
+        print(response.json())
+        return None

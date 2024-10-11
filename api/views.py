@@ -15,7 +15,7 @@ import pytz
 import uuid
 from .serializers import *
 from django.db.models import Q
-from .tasks import historic_fetch
+from .tasks import historic_fetch, fetch_users_by_location, create_all_task
 import json
 from django.core.files.base import ContentFile
 import base64
@@ -1084,6 +1084,13 @@ def update_contact_agreement(location_id, contact_id, agreement_cf):
 @api_view(['GET'])
 def historic(request):
     historic_fetch.delay()
+    return Response('started', status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def fetch_users(request):
+    location = Location.objects.first()
+    location_id = location.locationId
+    fetch_users_by_location.delay(location_id)
     return Response('started', status=status.HTTP_200_OK)
 
 @api_view(['POST'])

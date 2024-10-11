@@ -62,5 +62,33 @@ class Contact(models.Model):
     modified_at = models.DateField(null=True, blank=True)
     representative_signed_date = models.DateField(null=True, blank=True)
     client_signed_date = models.DateField(null=True, blank=True)
-    client_signed_date = models.DateField(null=True, blank=True)
     archived = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"{self.project_id} - {self.contact_id}"
+
+class User(models.Model):
+    user_id = models.CharField(primary_key=True, max_length=700)
+    name = models.CharField(max_length=700, null=True, blank=True)
+    email = models.CharField(max_length=700, null=True, blank=True)
+    phone = models.CharField(max_length=700, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+class Task(models.Model):
+    task_id = models.CharField(primary_key=True, max_length=700)
+    contact = models.ForeignKey(Contact, related_name='contact', on_delete=models.CASCADE)
+    name = models.CharField(max_length=700, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    assigned_to_id = models.CharField(max_length=700, null=True, blank=True)
+    assigned_to = models.CharField(max_length=700, null=True, blank=True)
+    completed = models.BooleanField(default=False)
+    due_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('contact', 'name')
+    
+    def __str__(self):
+        return f"{self.contact.project_id} : {self.name}"
