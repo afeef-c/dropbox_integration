@@ -1489,3 +1489,10 @@ def delete_current_client(request, project_id):
     contact.archived = True
     contact.save()
     return Response('success', status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def ghl_webhook(request):
+    print(request.data)
+    data = request.data
+
+    return Response('Success', status=status.HTTP_200_OK)
