@@ -532,7 +532,7 @@ def create_all_task(self, contact_id, *args):
             else:
                 assigned_user_name = 'Gio Leonardo'
 
-            print('assigned_user_name')
+            print(assigned_user_name)
             user_id = User.objects.get(name=assigned_user_name)
 
             new_task = create_task(location_id, contact_id, task_name, user_id, due_date)
