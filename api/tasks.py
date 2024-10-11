@@ -426,57 +426,66 @@ def fetch_users_by_location(self, location_id, *args):
 def create_all_task(self, contact_id, *args):
     
     tasks = [
-        {"task_name": "Contract signed & numbered", "assigned_to": ["Courtney Smith", "Debra Leonardo", "Mike Koppenhaver"]},
-        {"task_name": "Project added to Dropbox", "assigned_to": []},
-        {"task_name": "Emailed to PM & Office", "assigned_to": ["Courtney Smith", "Debra Leonardo"]},
-        {"task_name": "PM to call client for intro", "assigned_to": ["Julian Terrazas"]},
-        {"task_name": "Initial payment captured", "assigned_to": []},
-        {"task_name": "Design notes added to Dropbox", "assigned_to": []},
-        {"task_name": "HOA Guidelines captured", "assigned_to": []},
-        {"task_name": "Questionnaire captured", "assigned_to": []},
-        {"task_name": "House plans scanned (if applicable)", "assigned_to": []},
-        {"task_name": "Get Setbacks", "assigned_to": []},
-        {"task_name": "Schedule measure", "assigned_to": []},
-        {"task_name": "Measure/Prop Pics/Aerials", "assigned_to": []},
-        {"task_name": "Site plan completed", "assigned_to": ["Mike Koppenhaver"]},
-        {"task_name": "Monitor progress", "assigned_to": []},
-        {"task_name": "Track expenses", "assigned_to": []},
-        {"task_name": "Evaluate progress", "assigned_to": []},
-        {"task_name": "Address risks", "assigned_to": []},
-        {"task_name": "Design review with sales as needed", "assigned_to": []},
-        {"task_name": "House created in Structure Studio", "assigned_to": []},
-        {"task_name": "Design review with client", "assigned_to": []},
-        {"task_name": "HP Created", "assigned_to": []},
-        {"task_name": "Hardscape numbers", "assigned_to": []},
-        {"task_name": "Hardscape Prelim", "assigned_to": []},
-        {"task_name": "Revisions 1", "assigned_to": []},
-        {"task_name": "Revisions 2", "assigned_to": []},
-        {"task_name": "Revisions 3 (If needed/Hourly rates apply)", "assigned_to": []},
-        {"task_name": "HP Sign-Off (Notify Office & PP)", "assigned_to": ["Debra Leonardo"]},
-        {"task_name": "HP Created for PP", "assigned_to": ["Courtney Smith"]},
-        {"task_name": "HP Payment captured", "assigned_to": []},
-        {"task_name": "Initial call to client", "assigned_to": []},
-        {"task_name": "PP created", "assigned_to": []},
-        {"task_name": "PP meeting with client", "assigned_to": []},
-        {"task_name": "Revisions 1", "assigned_to": []},
-        {"task_name": "Revisions 2", "assigned_to": []},
-        {"task_name": "Revisions 3 (If needed/Hourly rates apply)", "assigned_to": []},
-        {"task_name": "PP Sign-Off (Notify office)", "assigned_to": ["Debra Leonardo"]},
-        {"task_name": "PP payment captured", "assigned_to": []},
-        {"task_name": "Layout Final set of plans on Borders", "assigned_to": ["Courtney Smith"]},
-        {"task_name": "Notify Designer to create Final HP (Callouts/totals/screenshots)", "assigned_to": []},
-        {"task_name": "Hardscape created (Notify PM)", "assigned_to": []},
-        {"task_name": "Assign Tech Sheets to Designer (PM to notify)", "assigned_to": []},
-        {"task_name": "Create Irrigation", "assigned_to": []},
-        {"task_name": "Create Drainage", "assigned_to": []},
-        {"task_name": "Create Lighting", "assigned_to": []},
-        {"task_name": "QC Tech sheets (Notify PM & Gio)", "assigned_to": ["Gio Leonardo"]},
-        {"task_name": "PM to notify Gio for Final", "assigned_to": []},
-        {"task_name": "Schedule client for Final", "assigned_to": []},
-        {"task_name": "Final plan presentation", "assigned_to": ["Debra Leonardo"]},
-        {"task_name": "Final payment captured", "assigned_to": []},
-        {"task_name": "Digital copies sent to client", "assigned_to": []}
+        {"category": "Sales", "task_name": "Contract signed & numbered", "assigned_to": ["Courtney Smith", "Debra Leonardo", "Mike Koppenhaver"]},
+        {"category": "Sales", "task_name": "Project added to Dropbox", "assigned_to": []},
+        {"category": "Sales", "task_name": "Emailed to PM & Office", "assigned_to": ["Courtney Smith", "Debra Leonardo"]},
+        {"category": "Sales", "task_name": "PM to call client for intro", "assigned_to": ["Julian Terrazas"]},
+        {"category": "Sales", "task_name": "Initial payment captured", "assigned_to": []},
+        {"category": "Sales", "task_name": "Design notes added to Dropbox", "assigned_to": []},
+        {"category": "Sales", "task_name": "HOA Guidelines captured", "assigned_to": []},
+        {"category": "Sales", "task_name": "Questionnaire captured", "assigned_to": []},
+        {"category": "Sales", "task_name": "House plans scanned (if applicable)", "assigned_to": []},
+        {"category": "Sales", "task_name": "Get Setbacks", "assigned_to": []},
+        {"category": "Measure", "task_name": "Schedule measure", "assigned_to": []},
+        {"category": "Measure", "task_name": "Measure/Prop Pics/Aerials", "assigned_to": []},
+        {"category": "Site Plan Created", "task_name": "Site plan completed", "assigned_to": ["Mike Koppenhaver"]},
+        {"category": "Hardscape", "task_name": "Monitor progress", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "Track expenses", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "Evaluate progress", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "Address risks", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "Design review with sales as needed", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "House created in Structure Studio", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "Design review with client", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "HP Created", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "Hardscape numbers", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "Hardscape Prelim", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "Revisions 1", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "Revisions 2", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "Revisions 3 (If needed/Hourly rates apply)", "assigned_to": []},
+        {"category": "Hardscape", "task_name": "HP Sign-Off (Notify Office & PP)", "assigned_to": ["Debra Leonardo"]},
+        {"category": "Hardscape", "task_name": "HP Created for PP", "assigned_to": ["Courtney Smith"]},
+        {"category": "Hardscape", "task_name": "HP Payment captured", "assigned_to": []},
+        {"category": "Planting Plan", "task_name": "Initial call to client", "assigned_to": []},
+        {"category": "Planting Plan", "task_name": "PP created", "assigned_to": []},
+        {"category": "Planting Plan", "task_name": "PP meeting with client", "assigned_to": []},
+        {"category": "Planting Plan", "task_name": "Revisions 1", "assigned_to": []},
+        {"category": "Planting Plan", "task_name": "Revisions 2", "assigned_to": []},
+        {"category": "Planting Plan", "task_name": "Revisions 3 (If needed/Hourly rates apply)", "assigned_to": []},
+        {"category": "Planting Plan", "task_name": "PP Sign-Off (Notify office)", "assigned_to": ["Debra Leonardo"]},
+        {"category": "Planting Plan", "task_name": "PP payment captured", "assigned_to": []},
+        {"category": "Planting Plan", "task_name": "Layout Final set of plans on Borders", "assigned_to": ["Courtney Smith"]},
+        {"category": "Final Set of Plans", "task_name": "Notify Designer to create Final HP (Callouts/totals/screenshots)", "assigned_to": []},
+        {"category": "Final Set of Plans", "task_name": "Hardscape created (Notify PM)", "assigned_to": []},
+        {"category": "Final Set of Plans", "task_name": "Assign Tech Sheets to Designer (PM to notify)", "assigned_to": []},
+        {"category": "Final Set of Plans", "task_name": "Create Irrigation", "assigned_to": []},
+        {"category": "Final Set of Plans", "task_name": "Create Drainage", "assigned_to": []},
+        {"category": "Final Set of Plans", "task_name": "Create Lighting", "assigned_to": []},
+        {"category": "Final Set of Plans", "task_name": "QC Tech sheets (Notify PM & Gio)", "assigned_to": ["Gio Leonardo"]},
+        {"category": "Final Set of Plans", "task_name": "PM to notify Gio for Final", "assigned_to": []},
+        {"category": "Final Set of Plans", "task_name": "Schedule client for Final", "assigned_to": []},
+        {"category": "Final Set of Plans", "task_name": "Final plan presentation", "assigned_to": ["Debra Leonardo"]},
+        {"category": "Final Set of Plans", "task_name": "Final payment captured", "assigned_to": []},
+        {"category": "Final Set of Plans", "task_name": "Digital copies sent to client", "assigned_to": []}
     ]
+
+    # {
+    #     "project_id" : "20-001",
+    #     "Task": "Contract signed & numbered",
+    #     "AssignedPerson": "Courtney Smith",
+    #     "ProgressDoneOrNotDone": "Yes",
+    #     "DueDate": "2024-10-20",
+    #     "ID": "mIlTIO6cgbKqD1IjCFKW"
+    # }
     contact = Contact.objects.get(contact_id=contact_id)
     location_id = contact.location_id
     location_timezone = Location.objects.get(locationId = location_id).timezone
@@ -505,7 +514,8 @@ def create_all_task(self, contact_id, *args):
 
     for task in tasks:
         task_name = task['task_name']
-        if not Task.objects.filter(contact=contact, name=task_name).exists():
+        category = task['category']
+        if not Task.objects.filter(contact=contact, name=task_name, category=category).exists():
             assigned_to_list = task['assigned_to']
             if assigned_to_list:
                 if len(assigned_to_list) > 1:
@@ -542,6 +552,7 @@ def create_all_task(self, contact_id, *args):
                 Task.objects.update_or_create(
                     task_id = task_id,
                     contact = contact,
+                    category = category,
                     name = task_name,
                     defaults={
                         'assigned_to_id' : user_id,

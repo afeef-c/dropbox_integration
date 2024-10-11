@@ -79,6 +79,7 @@ class User(models.Model):
 class Task(models.Model):
     task_id = models.CharField(primary_key=True, max_length=700)
     contact = models.ForeignKey(Contact, related_name='contact', on_delete=models.CASCADE)
+    category = models.CharField(max_length=700, null=True, blank=True)
     name = models.CharField(max_length=700, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     assigned_to_id = models.CharField(max_length=700, null=True, blank=True)
@@ -88,7 +89,7 @@ class Task(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('contact', 'name')
+        unique_together = ('contact', 'category', 'name')
     
     def __str__(self):
         return f"{self.contact.project_id} : {self.name}"
