@@ -12,6 +12,7 @@ urlpatterns = [
     path('historic', historic, name='historic'),
     path('fetch_users', fetch_users, name='fetch_users'),
     path('ghl_webhook', ghl_webhook, name='ghl_webhook'),
+    path('get_gantt_chart/<str:project_id>', get_gantt_chart, name='get_gantt_chart'),
 
     path('submit_agreement_v2', submit_agreement_v2, name='submit_agreement_v2'),
     path('delete_current_client/<str:project_id>', delete_current_client, name='delete_current_client'),

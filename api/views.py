@@ -1494,5 +1494,80 @@ def delete_current_client(request, project_id):
 def ghl_webhook(request):
     print(request.data)
     data = request.data
+    location_id = data.get('locationId')
+    try:
+        location_timezone = Location.objects.get(locationId = location_id).timezone
+    except:
+        location_timezone = None
+
+    if location_timezone:
+        type = data.get('type')
+        if type == 'TaskComplete':
+            task_id = data.get('id')
+            try:
+                task = Task.objects.get(task_id=task_id)
+            except:
+                task = None
+                print('No task found')
+            
+            if task:
+                user_id = data.get('assignedTo')
+                if user_id:
+                    assigned_user_name = User.objects.get(user_id=user_id).name
+                else:
+                    assigned_user_name = None
+                title = data.get('title')
+                due_date = data.get('dueDate')
+
+                try:
+                    naive_due_date = datetime.datetime.fromisoformat(due_date[:-1])
+                except:
+                    try:
+                        naive_due_date = datetime.datetime.strptime(due_date, '%Y-%m-%dT%H:%M:%S')
+                    except:
+                        naive_due_date = datetime.datetime.strptime(due_date, '%Y-%m-%d')
+
+                input_timezone = pytz.timezone("UTC")
+                due_date_obj = input_timezone.localize(naive_due_date)
+                target_timezone = pytz.timezone(location_timezone)
+                due_date_in_location_time_zone = due_date_obj.astimezone(target_timezone).replace(tzinfo=None).date()
+
+                task.completed = True
+                task.assigned_to_id = user_id
+                task.assigned_to = assigned_user_name
+                task.name = title
+                task.due_date = due_date_in_location_time_zone
+                task.save()
+                print('Task completed')
 
     return Response('Success', status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def get_gantt_chart(request, project_id):
+    contact = Contact.objects.get(project_id=project_id)
+    all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
+    payload = {
+        'project_id': project_id,
+        'start': all_tasks.first().start_date,
+        'end': all_tasks.latest('due_date').due_date,
+        'tasks': []
+    }
+    order = 0
+    for task in all_tasks:
+        order += 1
+        task_data = {
+            'start': task.start_date,
+            'end': task.due_date,
+            'name': task.name,
+            'category': task.category,
+            'id': task.task_id,
+            'progress': 100 if task.completed else 0,
+            'assigned_user': task.assigned_to,
+            'type': 'task',
+            'displayOrder': order
+        }
+
+        payload['tasks'].append(task_data)
+
+    return Response(payload, status=status.HTTP_200_OK)
+

@@ -548,6 +548,21 @@ def create_all_task(self, contact_id, *args):
             new_task = create_task(location_id, contact_id, task_name, user_id, due_date)
             if new_task:
                 task_id = new_task['id']
+                start_at = datetime.datetime.now(datetime.timezone.utc)
+                # Stringify in the format "YYYY-MM-DDTHH:MM:SSZ"
+                start_at_str = start_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+                try:
+                    naive_start_at = datetime.datetime.fromisoformat(start_at_str[:-1])
+                except:
+                    try:
+                        naive_start_at = datetime.datetime.strptime(start_at_str, '%Y-%m-%dT%H:%M:%S')
+                    except:
+                        naive_start_at = datetime.datetime.strptime(start_at_str, '%Y-%m-%d')
+
+                input_timezone = pytz.timezone("UTC")
+                start_at_obj = input_timezone.localize(naive_start_at)
+                target_timezone = pytz.timezone(location_timezone)
+                start_date = start_at_obj.astimezone(target_timezone).replace(tzinfo=None).date()
 
                 Task.objects.update_or_create(
                     task_id = task_id,
@@ -557,6 +572,7 @@ def create_all_task(self, contact_id, *args):
                     defaults={
                         'assigned_to_id' : user_id,
                         'assigned_to' : assigned_user_name,
+                        'start_date' : start_date,
                         'due_date' : due_date_in_location_time_zone
                     }
                 )
@@ -599,3 +615,81 @@ def create_task(location_id, contact_id, task_name, user_id, due_date):
     else:
         print(response.json())
         return None
+    
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def get_and_update_all_task(self, *args):
+    location = Location.objects.first()
+    location_id = location.locationId
+    location_timezone = location.timezone
+
+    unique_contact_ids = Task.objects.values_list('contact__contact_id', flat=True).distinct()
+
+    for contact_id in unique_contact_ids:
+        check_is_token_expired = checking_token_expiration(location_id)
+        if check_is_token_expired:
+            refresh_the_tokens = refreshing_tokens(location_id)
+
+        location = Location.objects.get(locationId=location_id)
+        access_token = location.access_token
+
+        url = f"https://services.leadconnectorhq.com/contacts/{contact_id}/tasks"
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "Version": "2021-07-28"
+        }
+
+        response = requests.get(url, headers=headers)
+        if response.ok:
+            data = response.json()
+            tasks = data['tasks']
+            for task in tasks:
+                task_id = task['id']
+
+                try:
+                    task = Task.objects.get(task_id=task_id)
+                except:
+                    task = None
+                    print('No task found')
+                
+                if task:
+                    user_id = task.get('assignedTo')
+                    if user_id:
+                        assigned_user_name = User.objects.get(user_id=user_id).name
+                    else:
+                        assigned_user_name = None
+                    title = task.get('title')
+                    due_date = task.get('dueDate')
+                    completed = task.get('completed')
+
+                    try:
+                        naive_due_date = datetime.datetime.fromisoformat(due_date[:-1])
+                    except:
+                        try:
+                            naive_due_date = datetime.datetime.strptime(due_date, '%Y-%m-%dT%H:%M:%S')
+                        except:
+                            naive_due_date = datetime.datetime.strptime(due_date, '%Y-%m-%d')
+
+                    input_timezone = pytz.timezone("UTC")
+                    due_date_obj = input_timezone.localize(naive_due_date)
+                    target_timezone = pytz.timezone(location_timezone)
+                    due_date_in_location_time_zone = due_date_obj.astimezone(target_timezone).replace(tzinfo=None).date()
+
+                    # Check if any field has changed before updating the task
+                    if (task.completed != completed or 
+                        task.assigned_to_id != user_id or 
+                        task.assigned_to != assigned_user_name or 
+                        task.name != title or 
+                        task.due_date != due_date_in_location_time_zone):
+
+                        print('Task updated in GHL')
+
+                        # Update the task fields
+                        task.completed = completed
+                        task.assigned_to_id = user_id
+                        task.assigned_to = assigned_user_name
+                        task.name = title
+                        task.due_date = due_date_in_location_time_zone
+                        task.save()
+        else:
+            print(response.json())

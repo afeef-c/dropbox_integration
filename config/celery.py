@@ -12,13 +12,13 @@ app.conf.update(timezone='UTC')
 
 app.config_from_object(settings, namespace='CELERY')
 
-# #Celery Beat Settings
-# app.conf.beat_schedule = {
-#     'schedule_all_data':{
-#         'task': 'urlshortener.tasks.all_data_dump',
-#         'schedule': crontab(hour=8, minute=2)
-#     }
-# }
+#Celery Beat Settings
+app.conf.beat_schedule = {
+    'schedule_all_data':{
+        'task': 'api.tasks.get_and_update_all_task',
+        'schedule': crontab(minute=0, hour='*')
+    }
+}
 
 app.autodiscover_tasks()
 
