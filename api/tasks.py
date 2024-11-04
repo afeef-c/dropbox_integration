@@ -647,12 +647,12 @@ def get_and_update_all_task(self, *args):
                 task_id = task['id']
 
                 try:
-                    task = Task.objects.get(task_id=task_id)
+                    is_task = Task.objects.get(task_id=task_id)
                 except:
-                    task = None
+                    is_task = None
                     print('No task found')
                 
-                if task:
+                if is_task:
                     user_id = task.get('assignedTo')
                     if user_id:
                         assigned_user_name = User.objects.get(user_id=user_id).name
@@ -676,20 +676,20 @@ def get_and_update_all_task(self, *args):
                     due_date_in_location_time_zone = due_date_obj.astimezone(target_timezone).replace(tzinfo=None).date()
 
                     # Check if any field has changed before updating the task
-                    if (task.completed != completed or 
-                        task.assigned_to_id != user_id or 
-                        task.assigned_to != assigned_user_name or 
-                        task.name != title or 
-                        task.due_date != due_date_in_location_time_zone):
+                    if (is_task.completed != completed or 
+                        is_task.assigned_to_id != user_id or 
+                        is_task.assigned_to != assigned_user_name or 
+                        is_task.name != title or 
+                        is_task.due_date != due_date_in_location_time_zone):
 
                         print('Task updated in GHL')
 
                         # Update the task fields
-                        task.completed = completed
-                        task.assigned_to_id = user_id
-                        task.assigned_to = assigned_user_name
-                        task.name = title
-                        task.due_date = due_date_in_location_time_zone
-                        task.save()
+                        is_task.completed = completed
+                        is_task.assigned_to_id = user_id
+                        is_task.assigned_to = assigned_user_name
+                        is_task.name = title
+                        is_task.due_date = due_date_in_location_time_zone
+                        is_task.save()
         else:
             print(response.json())
