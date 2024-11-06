@@ -459,7 +459,7 @@ def submit_form_data(request):
         'check_number': check_number,
         'modified_at': submitted_at.date(),
     }
-    if expiration_date:
+    if expiration_date and expiration_date != 'null':
         try:
             defaults['expiration_date'] = expiration_date
         except:
