@@ -1173,8 +1173,10 @@ def submit_agreement_v2(request):
 
     upload_cf_files = update_contact_file_customfields_v2(contact_id, agreement_file_details['file_link'], client_signature_link, representative_signature_link)
     if upload_cf_files:
-        contact.client_signature_url = client_signature_link
-        contact.representative_signature_url = representative_signature_link
+        if client_signature_link:
+            contact.client_signature_url = client_signature_link
+        if representative_signature_link:
+            contact.representative_signature_url = representative_signature_link
         contact.pdf_url = agreement_file_details['file_link']
         contact.save()
         serializer = ContactSerializerV2(contact)
