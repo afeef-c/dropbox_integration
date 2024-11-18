@@ -2242,7 +2242,7 @@ def open_projects_gantt_chart(request):
     }
     order = 0
     for contact in contacts_with_incomplete_tasks:
-        completed_tasks = Contact.objects.filter(contact__completed=True).count()
+        completed_tasks = Task.objects.filter(contact=contact, completed=True).count()
         progress = (completed_tasks/contact.total_tasks) * 100
         order += 1
         task_data = {
@@ -2252,9 +2252,7 @@ def open_projects_gantt_chart(request):
             'id': contact.contact_id,
             'progress': progress,
             'type': 'task',
-            'displayOrder': order,
-            'total_tasks': contact.total_tasks,
-            'completed_tasks': completed_tasks
+            'displayOrder': order
         }
 
         payload['tasks'].append(task_data)
