@@ -2252,7 +2252,9 @@ def open_projects_gantt_chart(request):
             'id': contact.contact_id,
             'progress': progress,
             'type': 'task',
-            'displayOrder': order
+            'displayOrder': order,
+            'total_tasks': contact.total_tasks,
+            'completed_tasks': completed_tasks
         }
 
         payload['tasks'].append(task_data)
