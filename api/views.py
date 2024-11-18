@@ -2216,7 +2216,7 @@ def update_task(request, task_id):
     return Response(payload, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
-def open_projects_gantt_chart(request, contact_id):
+def open_projects_gantt_chart(request):
     # Filter contacts with at least one incomplete task
 
     contacts_with_incomplete_tasks = Contact.objects.filter(
