@@ -2156,6 +2156,7 @@ def get_gantt_chart_v2(request, contact_id):
     all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
     payload = {
         'project_id': contact.project_id,
+        'project_name': contact.name,
         'start': all_tasks.first().start_date,
         'end': all_tasks.latest('due_date').due_date,
         'tasks': []
