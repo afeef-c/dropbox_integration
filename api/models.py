@@ -15,7 +15,7 @@ class Location(models.Model):
 
 class Contact(models.Model):
     contact_id = models.CharField(primary_key=True, max_length=700)
-    project_id = models.CharField(max_length=700, unique=True)
+    project_id = models.CharField(max_length=700, null=True, blank=True)
     location_id = models.CharField(max_length=700, null=True, blank=True)
     location_name = models.CharField(max_length=700, null=True, blank=True)
     name = models.CharField(max_length=700, null=True, blank=True)

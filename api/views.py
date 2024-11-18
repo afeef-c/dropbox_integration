@@ -23,6 +23,7 @@ from io import BytesIO
 from django.core.files.storage import default_storage
 import os
 from PIL import Image
+from django.db.models import Count, Case, When, IntegerField, Min, Max
 
 # Create your views here.
 
@@ -193,6 +194,12 @@ def current_client(request, project_id):
     contact = Contact.objects.get(project_id=project_id)
     serializer = ContactSerializerV2(contact)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def current_client_v2(request, contact_id):
+    contact = Contact.objects.get(contact_id=contact_id)
+    serializer = ContactSerializerV2(contact)
+    return Response({'data': serializer.data}, status=status.HTTP_200_OK)
     
 @api_view(['GET'])
 def current_clients(request):
@@ -207,7 +214,7 @@ def current_clients(request):
     start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
     end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
 
-    all_contacts = Contact.objects.filter(submitted_at__range=[start_date, end_date], archived=False).order_by('-project_id')
+    all_contacts = Contact.objects.filter(submitted_at__range=[start_date, end_date], archived=False).order_by('-submitted_at')
 
     if search:
         search_lower = search.lower()
@@ -226,42 +233,42 @@ def current_clients(request):
     serializer = ContactSerializerV2(all_contacts, many=True)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
-@api_view(['POST'])
-@parser_classes([MultiPartParser, FormParser])  # Enables file upload support
-def submit_client_signature(request):
-    form_data = request.data
+# @api_view(['POST'])
+# @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
+# def submit_client_signature(request):
+#     form_data = request.data
     
-    client_signature = request.FILES.get('signature')
-    agreement = request.FILES.get('pdf')
+#     client_signature = request.FILES.get('signature')
+#     agreement = request.FILES.get('pdf')
 
-    project_id = form_data.get('project_id')
+#     project_id = form_data.get('project_id')
 
-    location = Location.objects.first()
-    location_id = location.locationId
-    location_timezone = location.timezone
+#     location = Location.objects.first()
+#     location_id = location.locationId
+#     location_timezone = location.timezone
 
-    timezone = pytz.timezone(location_timezone)
-    submitted_at = datetime.datetime.now(timezone).replace(tzinfo=None)
+#     timezone = pytz.timezone(location_timezone)
+#     submitted_at = datetime.datetime.now(timezone).replace(tzinfo=None)
 
-    all_custom_fields = get_all_custom_fields(location_id)
-    for field in all_custom_fields:
-        if field['name'] == 'Client Signature':
-            client_signature_cf = field['id']
-        if field['name'] == 'Representative Signature':
-            representative_signature_cf = field['id']
-        if field['name'] == 'Agreement':
-            agreement_cf = field['id']
+#     all_custom_fields = get_all_custom_fields(location_id)
+#     for field in all_custom_fields:
+#         if field['name'] == 'Client Signature':
+#             client_signature_cf = field['id']
+#         if field['name'] == 'Representative Signature':
+#             representative_signature_cf = field['id']
+#         if field['name'] == 'Agreement':
+#             agreement_cf = field['id']
 
-    contact = Contact.objects.get(project_id=project_id)
+#     contact = Contact.objects.get(project_id=project_id)
 
-    contact.client_signature = client_signature
-    contact.client_signed_date = submitted_at.date()
-    contact.pdf = agreement
-    contact.save()
+#     contact.client_signature = client_signature
+#     contact.client_signed_date = submitted_at.date()
+#     contact.pdf = agreement
+#     contact.save()
 
-    update_contact_file_customfields(location_id=location_id, contact_id=contact.contact_id, client_signature_cf=client_signature_cf, representative_signature_cf=representative_signature_cf, agreement_cf=agreement_cf)
-    serializer = ContactSerializerV2(contact)
-    return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+#     update_contact_file_customfields(location_id=location_id, contact_id=contact.contact_id, client_signature_cf=client_signature_cf, representative_signature_cf=representative_signature_cf, agreement_cf=agreement_cf)
+#     serializer = ContactSerializerV2(contact)
+#     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -1099,14 +1106,19 @@ def submit_agreement_v2(request):
     print(request.data)
     # Extract form data
     project_id = request.data.get('project_id')
+    if not project_id:
+        contact_id = request.data.get('contact_id')
     # Extract files
     agreement = request.FILES.get('pdf')
     client_signature = request.FILES.get('signature')
     representative_signature = request.FILES.get('representative_sign')
 
-    contact = Contact.objects.get(project_id=project_id)
+    if project_id:
+        contact = Contact.objects.get(project_id=project_id)
+    else:
+        contact = Contact.objects.get(contact_id=contact_id)
+
     contact_id = contact.contact_id
-    # contact_id = 'sjxvbhnyc85y580azLgd'
 
     # Define storage folder path
     agreement_folder_path = os.path.join(settings.MEDIA_ROOT, 'agreements')
@@ -1417,11 +1429,76 @@ def update_contact_file_customfields_v2(contact_id, agreement_file_link, client_
         print("Error occured while uploading file to custom field")
         print(response.json())
         return False
+    
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])  # Enables file upload support
+def submit_client_signature_v2(request):
+    form_data = request.data
+    
+    client_signature = request.FILES.get('signature')
+    agreement = request.FILES.get('pdf')
+
+    contact_id = form_data.get('contact_id')
+
+    contact = Contact.objects.get(contact_id=contact_id)
+
+    agreement_folder_path = os.path.join(settings.MEDIA_ROOT, 'agreements')
+    signature_folder_path = os.path.join(settings.MEDIA_ROOT, 'signatures')
+    if not os.path.exists(agreement_folder_path):
+        os.makedirs(agreement_folder_path)
+    if not os.path.exists(signature_folder_path):
+        os.makedirs(signature_folder_path)
+
+    # If it's a PDF, create/overwrite the file in the folder
+    pdf_path = os.path.join(agreement_folder_path, f'agreement.pdf')
+    with default_storage.open(pdf_path, 'wb+') as destination:
+        for chunk in agreement.chunks():
+            destination.write(chunk)
+
+    agreement_file = upload_agreement_file(contact_id)
+    if not agreement_file:
+        return Response('Failed to upload the media file', status=400)
+
+    agreement_file_details = get_agreement_file(contact_id, agreement_file)
+    if not agreement_file_details:
+        return Response('Failed to get file details', status=400)
+    
+    if client_signature and client_signature != 'null':
+        client_signature_path = os.path.join(signature_folder_path, f'client_signature.png')
+        with default_storage.open(client_signature_path, 'wb+') as destination:
+            for chunk in client_signature.chunks():
+                destination.write(chunk)
+        
+        client_signature_file_name = 'client_signature.png'
+        client_signature_file = upload_signature_file(contact_id, client_signature_file_name)
+        if not client_signature_file:
+            return Response('Failed to upload the client_signature file', status=400)
+
+        client_signature_details = get_signature_file(contact_id, client_signature_file, client_signature_file_name)
+        if not client_signature_details:
+            return Response('Failed to get client_signature file details', status=400)
+        
+    try:
+        client_signature_link = client_signature_details['file_link']
+    except:
+        client_signature_link = None
+
+    representative_signature_link=None
+
+    upload_cf_files = update_contact_file_customfields_v2(contact_id, agreement_file_details['file_link'], client_signature_link, representative_signature_link)
+    if upload_cf_files:
+        contact.client_signature_url = client_signature_link
+        contact.pdf_url = agreement_file_details['file_link']
+        contact.save()
+        serializer = ContactSerializerV2(contact)
+        return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+    else:
+        return Response('Failed to upload the files to CF', status=400)
 
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
-def submit_client_signature_v2(request):
+def submit_client_signature(request):
     form_data = request.data
     
     client_signature = request.FILES.get('signature')
@@ -1484,6 +1561,13 @@ def submit_client_signature_v2(request):
         return Response({'data': serializer.data}, status=status.HTTP_200_OK)
     else:
         return Response('Failed to upload the files to CF', status=400)
+    
+@api_view(['POST'])
+def delete_current_client_v2(request, contact_id):
+    contact = Contact.objects.get(contact_id=contact_id)
+    contact.archived = True
+    contact.save()
+    return Response('success', status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 def delete_current_client(request, project_id):
@@ -1573,3 +1657,613 @@ def get_gantt_chart(request, project_id):
 
     return Response(payload, status=status.HTTP_200_OK)
 
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])  # Enables file upload support
+def submit_form_data_v2(request):
+    print(request.data)
+    form_data = request.data
+
+
+    client_signature = request.FILES.get('signature')
+    representative_signature = request.FILES.get('representative_sign')
+    agreement = request.FILES.get('pdf')
+    
+    # Extract form data from the parsed JSON
+    contact_id = form_data.get('contact_id')
+    project_id = form_data.get('project_id')
+    print(contact_id)
+    refferd_by = form_data.get('refferd_by')
+    client_name = form_data.get('name')
+    address = form_data.get('address')
+    city = form_data.get('city')
+    state = form_data.get('state')
+    zip = form_data.get('zip')
+    primary_phone = form_data.get('primary_phone')
+    secondary_phone = form_data.get('secondary_phone')
+    primary_email = form_data.get('primary_email')
+    secondary_email = form_data.get('secondary_email')
+
+    # // Project Info
+    HOA = form_data.get('hoa')
+    plot_plan = form_data.get('plot_plan')
+    hardscape = form_data.get('hardscape_2d_3d')
+    hardscape_and_planning = form_data.get('hardscape_and_planting')
+    above_plans_plus = form_data.get('above_plan_plus')
+    measuring_for_site_plan = form_data.get('measuring_for_site_plan')
+    property_droning = form_data.get('property_droning')
+    property_survey = form_data.get('property_survey')
+    consultations_and_revisions_amount = form_data.get('consultations_and_revisions_amount_hour')
+    other = form_data.get('other')
+    describe_other = form_data.get('describe_other')
+    project_amount = form_data.get('project_amount')
+
+    # // Billing Info
+    payment_options = form_data.get('payment_option')
+
+    # //credit card
+    amount_to_charge_for_credit_card = form_data.get('amount_to_charge_for_credit_card')
+    card_holder_name = form_data.get('card_holder_name')
+    credit_card_number = form_data.get('credit_card_number')
+    expiration_date = form_data.get('expiration_date')
+    billing_zip_code = form_data.get('billing_zip_code')
+    CVV = form_data.get('cvv')
+
+    # //zelle
+    amount_to_charge_for_zelle = form_data.get('amount_to_charge_for_zelle')
+
+    # //cash
+    amount_to_charge_for_cash = form_data.get('amount_to_charge_for_cash')
+
+    # //check
+    amount_to_charge_for_check = form_data.get('amount_to_charge_for_check')
+    check_number = form_data.get('check_number')
+
+    location = Location.objects.first()
+    location_id = location.locationId
+    location_name = location.location_name
+    location_timezone = location.timezone
+
+    timezone = pytz.timezone(location_timezone)
+    submitted_at = datetime.datetime.now(timezone).replace(tzinfo=None)
+
+    all_custom_fields = get_all_custom_fields(location_id)
+    for field in all_custom_fields:
+        if field['name'] == 'ReferredBy':
+            refferd_by_cf = field['id']
+        if field['name'] == 'SecondaryPhone':
+            secondary_phone_cf = field['id']
+        if field['name'] == 'SecondaryEmail':
+            secondary_email_cf = field['id']
+        if field['name'] == 'HOA':
+            HOA_cf = field['id']
+        if field['name'] == 'Plot Plan':
+            plot_plan_cf = field['id']
+        if field['name'] == 'Hardscape (2D & 3D)':
+            hardscape_cf = field['id']
+        if field['name'] == 'Hardscape & Planting':
+            hardscape_and_planning_cf = field['id']
+        if field['name'] == 'Above Plans plus (Irrigation, Drainage and Lighting)':
+            above_plans_plus_cf = field['id']
+        if field['name'] == 'Measuring for site plan':
+            measuring_for_site_plan_cf = field['id']
+        if field['name'] == 'Property Droning':
+            property_droning_cf = field['id']
+        if field['name'] == 'Property Survey (price determined per job)':
+            property_survey_cf = field['id']
+        if field['name'] == 'Consultations And Revisions Amount':
+            consultations_and_revisions_amount_cf = field['id']
+        if field['name'] == 'Other':
+            other_cf = field['id']
+        if field['name'] == 'Describe Other':
+            describe_other_cf = field['id']
+        if field['name'] == 'Project Amount':
+            project_amount_cf = field['id']
+        if field['name'] == 'Payment Options':
+            payment_options_cf = field['id']
+        if field['name'] == 'Amount to charge for Credit Card':
+            amount_to_charge_for_credit_card_cf = field['id']
+        if field['name'] == 'Amount to charge for Zelle':
+            amount_to_charge_for_zelle_cf = field['id']
+        if field['name'] == 'Amount to charge for cash':
+            amount_to_charge_for_cash_cf = field['id']
+        if field['name'] == 'Amount to charge for check':
+            amount_to_charge_for_check_cf = field['id']
+        if field['name'] == 'Check Number':
+            check_number_cf = field['id']
+        if field['name'] == 'Client Signature':
+            client_signature_cf = field['id']
+        if field['name'] == 'Representative Signature':
+            representative_signature_cf = field['id']
+        if field['name'] == 'Agreement':
+            agreement_cf = field['id']
+        if field['name'] == 'ReferredBy':
+            refferd_by_cf = field['id']
+        if field['name'] == 'Client Signature Form Link':
+            client_signature_form_link_cf = field['id']
+
+    defaults = {
+        'project_id' : project_id,
+        'location_id': location_id,
+        'location_name': location_name,
+        'name': client_name,
+        'primary_phone': primary_phone,
+        'primary_email': primary_email,
+        'secondary_phone': secondary_phone,
+        'secondary_email': secondary_email,
+        'refferd_by': refferd_by,
+        'address': address,
+        'city': city,
+        'state': state,
+        'zip': zip,
+        'hoa': HOA,
+        'plot_plan': plot_plan,
+        'hardscape_2d_3d': hardscape,
+        'hardscape_and_planting': hardscape_and_planning,
+        'above_plan_plus': above_plans_plus,
+        'measuring_for_site_plan': measuring_for_site_plan,
+        'property_droning': property_droning,
+        'property_survey': property_survey,
+        'consultations_and_revisions_amount_hour': consultations_and_revisions_amount,
+        'other': other,
+        'describe_other': describe_other,
+        'project_amount': project_amount,
+        'payment_option': payment_options,
+        'amount_to_charge_for_credit_card': amount_to_charge_for_credit_card,
+        'card_holder_name': card_holder_name,
+        'credit_card_number': credit_card_number,
+        'billing_zip_code': billing_zip_code,
+        'cvv': CVV,
+        'amount_to_charge_for_zelle': amount_to_charge_for_zelle,
+        'amount_to_charge_for_cash': amount_to_charge_for_cash,
+        'amount_to_charge_for_check': amount_to_charge_for_check,
+        'check_number': check_number,
+        'modified_at': submitted_at.date(),
+    }
+    if expiration_date and expiration_date != 'null':
+        try:
+            defaults['expiration_date'] = expiration_date
+        except:
+            pass
+        try:
+            defaults['expiration_date_str'] = expiration_date
+        except:
+            pass
+
+    if client_signature and client_signature != 'null':
+        # defaults['client_signature'] = client_signature
+        defaults['client_signed_date'] = submitted_at.date()
+
+    if representative_signature and representative_signature != 'null':
+        # defaults['representative_signature'] = representative_signature
+        defaults['representative_signed_date'] = submitted_at.date()
+    
+    # if agreement:
+    #     defaults['pdf'] = agreement
+
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+
+    location = Location.objects.get(locationId = location_id)
+    access_token = location.access_token
+
+    if not contact_id:
+
+        defaults['submitted_at'] = submitted_at.date()
+        
+        url = "https://services.leadconnectorhq.com/contacts/"
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "Version": "2021-07-28"
+        }
+        data = {
+            "name": client_name,
+            "email" : primary_email,
+            "phone" : primary_phone,
+            "address1" : address,
+            "city" : city,
+            "state" : state,
+            "locationId": location_id,
+            "customFields": [
+                {
+                    "id": refferd_by_cf,
+                    "field_value": refferd_by
+                },
+                {
+                    "id": secondary_phone_cf,
+                    "field_value": secondary_phone
+                },
+                {
+                    "id": secondary_email_cf,
+                    "field_value": secondary_email
+                },
+                {
+                    "id": HOA_cf,
+                    "field_value": HOA
+                },
+                {
+                    "id": plot_plan_cf,
+                    "field_value": plot_plan
+                },
+                {
+                    "id": hardscape_cf,
+                    "field_value": hardscape
+                },
+                {
+                    "id": hardscape_and_planning_cf,
+                    "field_value": hardscape_and_planning
+                },
+                {
+                    "id": above_plans_plus_cf,
+                    "field_value": above_plans_plus
+                },
+                {
+                    "id": measuring_for_site_plan_cf,
+                    "field_value": measuring_for_site_plan
+                },
+                {
+                    "id": property_droning_cf,
+                    "field_value": property_droning
+                },
+                {
+                    "id": property_survey_cf,
+                    "field_value": property_survey
+                },
+                {
+                    "id": consultations_and_revisions_amount_cf,
+                    "field_value": consultations_and_revisions_amount
+                },
+                {
+                    "id": other_cf,
+                    "field_value": other
+                },
+                {
+                    "id": describe_other_cf,
+                    "field_value": describe_other
+                },
+                {
+                    "id": project_amount_cf,
+                    "field_value": project_amount
+                },
+                {
+                    "id": payment_options_cf,
+                    "field_value": payment_options
+                },
+                {
+                    "id": amount_to_charge_for_credit_card_cf,
+                    "field_value": amount_to_charge_for_credit_card
+                },
+                {
+                    "id": amount_to_charge_for_zelle_cf,
+                    "field_value": amount_to_charge_for_zelle
+                },
+                {
+                    "id": amount_to_charge_for_cash_cf,
+                    "field_value": amount_to_charge_for_cash
+                },
+                {
+                    "id": amount_to_charge_for_check_cf,
+                    "field_value": amount_to_charge_for_check
+                },
+                {
+                    "id": check_number_cf,
+                    "field_value": check_number
+                }
+            ]
+        }
+
+        print(data)
+        response = requests.post(url, headers=headers, json=data)
+        if response.ok:
+            contact_data = response.json()
+            contact = contact_data.get('contact')
+            contact_id = contact['id']
+            print(contact_id)
+            client_signature_form_link = f'https://main.d2f78myqkxzqx9.amplifyapp.com/client-signature/{contact_id}'
+            update_client_signature_form_link_cf(location_id, contact_id, client_signature_form_link_cf, client_signature_form_link)
+
+            # Use update_or_create method
+            new_contact, created = Contact.objects.update_or_create(
+                contact_id=contact_id,
+                defaults=defaults
+            )
+
+            print('contact created')
+            serializer = ContactSerializerV2(new_contact)
+            return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+        else:
+            error_response = response.json()
+            print(error_response)
+            message = error_response.get('message')
+            return Response(message, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        client_signature_form_link = f'https://main.d2f78myqkxzqx9.amplifyapp.com/client-signature/{contact_id}'
+
+        url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "Version": "2021-07-28"
+        }
+
+        data = {
+            "name": client_name,
+            "email" : primary_email,
+            "customFields": [
+                {
+                    "id": refferd_by_cf,
+                    "field_value": refferd_by
+                },
+                {
+                    "id": secondary_phone_cf,
+                    "field_value": secondary_phone
+                },
+                {
+                    "id": secondary_email_cf,
+                    "field_value": secondary_email
+                },
+                {
+                    "id": HOA_cf,
+                    "field_value": HOA
+                },
+                {
+                    "id": plot_plan_cf,
+                    "field_value": plot_plan
+                },
+                {
+                    "id": hardscape_cf,
+                    "field_value": hardscape
+                },
+                {
+                    "id": hardscape_and_planning_cf,
+                    "field_value": hardscape_and_planning
+                },
+                {
+                    "id": above_plans_plus_cf,
+                    "field_value": above_plans_plus
+                },
+                {
+                    "id": measuring_for_site_plan_cf,
+                    "field_value": measuring_for_site_plan
+                },
+                {
+                    "id": property_droning_cf,
+                    "field_value": property_droning
+                },
+                {
+                    "id": property_survey_cf,
+                    "field_value": property_survey
+                },
+                {
+                    "id": consultations_and_revisions_amount_cf,
+                    "field_value": consultations_and_revisions_amount
+                },
+                {
+                    "id": other_cf,
+                    "field_value": other
+                },
+                {
+                    "id": describe_other_cf,
+                    "field_value": describe_other
+                },
+                {
+                    "id": project_amount_cf,
+                    "field_value": project_amount
+                },
+                {
+                    "id": payment_options_cf,
+                    "field_value": payment_options
+                },
+                {
+                    "id": amount_to_charge_for_credit_card_cf,
+                    "field_value": amount_to_charge_for_credit_card
+                },
+                {
+                    "id": amount_to_charge_for_zelle_cf,
+                    "field_value": amount_to_charge_for_zelle
+                },
+                {
+                    "id": amount_to_charge_for_cash_cf,
+                    "field_value": amount_to_charge_for_cash
+                },
+                {
+                    "id": amount_to_charge_for_check_cf,
+                    "field_value": amount_to_charge_for_check
+                },
+                {
+                    "id": check_number_cf,
+                    "field_value": check_number
+                },
+                {
+                    "id": client_signature_form_link_cf,
+                    "field_value": client_signature_form_link
+                }
+            ]
+        }
+
+        if primary_phone:
+            data['phone'] = primary_phone
+        if address:
+            data['address1'] = address
+        if city:
+            data['city'] = city
+        if state:
+            data['state'] = state
+
+        print(data)
+        response = requests.put(url, headers=headers, json=data)
+        if response.ok:
+            # Use update_or_create method
+            update_contact, created = Contact.objects.update_or_create(
+                contact_id=contact_id,
+                defaults=defaults
+            )
+            
+            serializer = ContactSerializerV2(update_contact)
+            return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+        else:
+            error_response = response.json()
+            print(error_response)
+            message = error_response.get('message')
+            return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
+
+def update_client_signature_form_link_cf(location_id, contact_id, client_signature_form_link_cf, client_signature_form_link):
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+
+    location = Location.objects.get(locationId = location_id)
+    access_token = location.access_token
+
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Version": "2021-07-28"
+    }
+
+    data = {
+        
+        "customFields": [
+            
+            {
+                "id": client_signature_form_link_cf,
+                "field_value": client_signature_form_link
+            }
+        ]
+    }
+
+    
+    response = requests.put(url, headers=headers, json=data)
+    if response.ok:
+        print('client_signature_form_link updated')
+    else:
+        print('Failed to update client_signature_form_link')
+
+@api_view(['GET'])
+def get_gantt_chart_v2(request, contact_id):
+    contact = Contact.objects.get(contact_id=contact_id)
+    all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
+    payload = {
+        'project_id': contact.project_id,
+        'start': all_tasks.first().start_date,
+        'end': all_tasks.latest('due_date').due_date,
+        'tasks': []
+    }
+    order = 0
+    for task in all_tasks:
+        order += 1
+        task_data = {
+            'start': task.start_date,
+            'end': task.due_date,
+            'name': task.name,
+            'category': task.category,
+            'id': task.task_id,
+            'progress': 100 if task.completed else 0,
+            'assigned_user': task.assigned_to,
+            'type': 'task',
+            'displayOrder': order
+        }
+
+        payload['tasks'].append(task_data)
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def update_task(request, task_id):
+    task = Task.objects.get(task_id=task_id)
+    data = request.data
+    task.start_date = data['start']
+    task.due_date = data['end']
+    task.save()
+
+    contact = task.contact
+
+    all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
+    payload = {
+        'project_id': contact.project_id,
+        'start': all_tasks.first().start_date,
+        'end': all_tasks.latest('due_date').due_date,
+        'tasks': []
+    }
+    order = 0
+    for task in all_tasks:
+        order += 1
+        task_data = {
+            'start': task.start_date,
+            'end': task.due_date,
+            'name': task.name,
+            'category': task.category,
+            'id': task.task_id,
+            'progress': 100 if task.completed else 0,
+            'assigned_user': task.assigned_to,
+            'type': 'task',
+            'displayOrder': order
+        }
+
+        payload['tasks'].append(task_data)
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def open_projects_gantt_chart(request, contact_id):
+    # Filter contacts with at least one incomplete task
+
+    contacts_with_incomplete_tasks = Contact.objects.filter(
+        contact__completed=False
+    ).annotate(
+        smallest_start_date=Min('contact__start_date'),
+        largest_due_date=Max('contact__due_date'),
+        total_tasks=Count('contact'),
+        completed_tasks=Count(
+            Case(
+                When(contact__completed=True, then=1),
+                output_field=IntegerField()
+            )
+        ),
+        progress=100 * Count(
+            Case(
+                When(contact__completed=True, then=1),
+                output_field=IntegerField()
+            )
+        ) / Count('contact', distinct=True)
+    ).distinct().order_by('submitted_at')
+
+    result = Task.objects.filter(
+        contact__in=Contact.objects.filter(contact__completed=False)
+    ).aggregate(
+        smallest_start_date=Min('start_date'),
+        largest_due_date=Max('due_date')
+    )
+
+    payload = {
+        'start': result['smallest_start_date'],
+        'end': result['largest_due_date'],
+        'tasks': []
+    }
+    order = 0
+    for contact in contacts_with_incomplete_tasks:
+        order += 1
+        task_data = {
+            'start': contact.smallest_start_date,
+            'end': contact.largest_due_date,
+            'name': contact.name,
+            'id': contact.contact_id,
+            'progress': contact.progress,
+            'type': 'task',
+            'displayOrder': order
+        }
+
+        payload['tasks'].append(task_data)
+
+    return Response(payload, status=status.HTTP_200_OK)

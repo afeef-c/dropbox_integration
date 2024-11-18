@@ -424,6 +424,28 @@ def fetch_users_by_location(self, location_id, *args):
     
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
 def create_all_task(self, contact_id, *args):
+    contact = Contact.objects.get(contact_id=contact_id)
+    if not contact.project_id:
+        current_year = datetime.datetime.now().year
+        # Extract last two digits of the year
+        year_short = str(current_year)[-2:]
+        # Find the project with the largest sequence number for the current year
+        last_project = Contact.objects.filter(project_id__startswith=year_short).order_by('-project_id').first()
+
+        if last_project:
+            # Extract the sequence number from the project_id (e.g., 24-001 -> 001)
+            last_sequence = int(last_project.project_id.split('-')[1])
+            next_sequence = last_sequence + 1
+        else:
+            # If no project exists for the current year, start with 1
+            next_sequence = 1
+
+        # Generate the new project_id in the format YY-XXX
+        project_id = f"{year_short}-{str(next_sequence).zfill(3)}"
+
+        contact.project_id = project_id
+        contact.save()
+        pass_project_id_to_ghl(contact.location_id, contact_id, project_id)
     
     tasks = [
         {"category": "Sales", "task_name": "Contract signed & numbered", "assigned_to": ["Courtney Smith", "Debra Leonardo", "Mike Koppenhaver"]},
@@ -582,6 +604,50 @@ def create_all_task(self, contact_id, *args):
                 print(f'Failed to create the {task_name} task for {contact.name}')
         else:
             print(f'{task_name} task already added')
+
+def pass_project_id_to_ghl(location_id, contact_id, project_id):
+
+    all_custom_fields = get_all_custom_fields(location_id)
+    for field in all_custom_fields:
+        if field['name'] == 'Project ID':
+            project_id_cf = field['id']
+            break
+        
+
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+
+    location = Location.objects.get(locationId = location_id)
+    access_token = location.access_token
+
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Version": "2021-07-28"
+    }
+
+    data = {
+        
+        "customFields": [
+            
+            {
+                "id": project_id_cf,
+                "field_value": project_id
+            }
+        ]
+    }
+
+    
+    response = requests.put(url, headers=headers, json=data)
+    if response.ok:
+        print('project_id CF updated')
+    else:
+        print('Failed to update project_id CF')
             
 def create_task(location_id, contact_id, task_name, user_id, due_date):
     check_is_token_expired = checking_token_expiration(location_id)
