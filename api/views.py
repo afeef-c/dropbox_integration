@@ -1681,8 +1681,10 @@ def submit_form_data_v2(request):
     zip = form_data.get('zip')
     primary_phone = form_data.get('primary_phone')
     secondary_phone = form_data.get('secondary_phone')
+    secondary_phone_name = form_data.get('secondary_phone_name')
     primary_email = form_data.get('primary_email')
     secondary_email = form_data.get('secondary_email')
+    secondary_email_name = form_data.get('secondary_email_name')
 
     # // Project Info
     HOA = form_data.get('hoa')
@@ -1790,7 +1792,9 @@ def submit_form_data_v2(request):
         'primary_phone': primary_phone,
         'primary_email': primary_email,
         'secondary_phone': secondary_phone,
+        'secondary_phone_name': secondary_phone_name,
         'secondary_email': secondary_email,
+        'secondary_email_name': secondary_email_name,
         'refferd_by': refferd_by,
         'address': address,
         'city': city,
