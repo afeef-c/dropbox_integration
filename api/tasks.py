@@ -609,7 +609,7 @@ def pass_project_id_to_ghl(location_id, contact_id, project_id):
 
     all_custom_fields = get_all_custom_fields(location_id)
     for field in all_custom_fields:
-        if field['name'] == 'Project ID':
+        if field['name'] == 'Design Project No':
             project_id_cf = field['id']
             break
         
