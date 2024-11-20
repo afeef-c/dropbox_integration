@@ -24,7 +24,7 @@ class Contact(models.Model):
     secondary_phone = models.CharField(max_length=700, null=True, blank=True)
     secondary_email = models.CharField(max_length=700, null=True, blank=True)
     secondary_phone_name = models.CharField(max_length=700, null=True, blank=True)
-    secondary_email_name = models.CharField(max_length=700, null=True, blank=True)
+    primary_phone_name = models.CharField(max_length=700, null=True, blank=True)
     refferd_by = models.CharField(max_length=700, null=True, blank=True)
     address = models.CharField(max_length=700, null=True, blank=True)
     zip = models.CharField(max_length=700, null=True, blank=True)
