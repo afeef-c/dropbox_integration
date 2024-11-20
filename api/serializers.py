@@ -49,7 +49,7 @@ class ContactSerializerV2(serializers.ModelSerializer):
         model = Contact
         fields = [
             'contact_id', 'project_id', 'location_id', 'location_name', 'name',
-            'primary_phone', 'primary_email', 'secondary_phone', 'secondary_email',
+            'primary_phone', 'primary_email', 'secondary_phone', 'secondary_email', 'secondary_phone_name', 'secondary_email_name',
             'refferd_by', 'address', 'zip', 'city', 'state', 'hoa', 'plot_plan',
             'hardscape_2d_3d', 'hardscape_and_planting', 'above_plan_plus',
             'measuring_for_site_plan', 'property_droning', 'property_survey',
