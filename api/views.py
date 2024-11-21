@@ -1567,7 +1567,36 @@ def delete_current_client_v2(request, contact_id):
     contact = Contact.objects.get(contact_id=contact_id)
     contact.archived = True
     contact.save()
+    add_archieved_tag_to_ghl(contact.location_id, contact_id)
     return Response('success', status=status.HTTP_200_OK)
+
+def add_archieved_tag_to_ghl(location_id, contact_id):
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+
+    location = Location.objects.get(locationId = location_id)
+    access_token = location.access_token
+
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}/tags"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Version": "2021-07-28"
+    }
+    data = {
+        "tags": ['archived']
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+    if response.ok:
+        print('Archived tag added')
+    else:
+        print('Failed to add Archived tag')
+        print(response.json())
 
 @api_view(['POST'])
 def delete_current_client(request, project_id):
@@ -1624,9 +1653,66 @@ def ghl_webhook(request):
                 task.name = title
                 task.due_date = due_date_in_location_time_zone
                 task.save()
+                add_task_tag_to_ghl_contact(location_id, task.contact.contact_id, title)
                 print('Task completed')
 
     return Response('Success', status=status.HTTP_200_OK)
+
+def add_task_tag_to_ghl_contact(location_id, contact_id, title):
+    if title == 'Contract signed & numbered':
+        tag = ['contract signed']
+    elif title == 'Emailed to PM & Office':
+        tag = ['emailed to pm']
+    elif title == 'PM to call client for intro':
+        tag = ['pm to call client']
+    elif title == 'Initial payment captured':
+        tag = ['initial payment']
+    elif title == 'Site plan completed':
+        tag = ['site plan']
+    elif title == 'HP Sign-Off (Notify Office & PP)':
+        tag = ['hp sign-off']
+    elif title == 'HP Created for PP':
+        tag = ['hp created']
+    elif title == 'PP Sign-Off (Notify office)':
+        tag = ['pp sign-off']
+    elif title == 'Layout Final set of plans on Borders':
+        tag = ['layout final']
+    elif title == 'QC Tech sheets (Notify PM & Gio)':
+        tag = ['qc tech']
+    elif title == 'Final plan presentation':
+        tag = ['final plan']
+    else:
+        tag = []
+
+    if tag:
+        check_is_token_expired = checking_token_expiration(location_id)
+        if check_is_token_expired:
+            refresh_the_tokens = refreshing_tokens(location_id)
+        else:
+            pass
+
+        location = Location.objects.get(locationId = location_id)
+        access_token = location.access_token
+
+        url = f"https://services.leadconnectorhq.com/contacts/{contact_id}/tags"
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "Version": "2021-07-28"
+        }
+        data = {
+            "tags": tag
+        }
+
+        response = requests.post(url, headers=headers, json=data)
+        if response.ok:
+            print('Task tag added')
+        else:
+            print('Failed to add Task tag')
+            print(response.json())
+    else:
+        print('tag is empty')
 
 @api_view(['GET'])
 def get_gantt_chart(request, project_id):
