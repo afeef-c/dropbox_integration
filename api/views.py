@@ -1871,7 +1871,7 @@ def submit_form_data_v2(request):
             client_signature_form_link_cf = field['id']
 
     defaults = {
-        'project_id' : project_id,
+        # 'project_id' : project_id,
         'location_id': location_id,
         'location_name': location_name,
         'name': client_name,
