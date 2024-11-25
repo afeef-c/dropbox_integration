@@ -23,7 +23,7 @@ from io import BytesIO
 from django.core.files.storage import default_storage
 import os
 from PIL import Image
-from django.db.models import Count, Case, When, IntegerField, Min, Max
+from django.db.models import Count, Case, When, IntegerField, Min, Max, F
 
 # Create your views here.
 
@@ -214,7 +214,7 @@ def current_clients(request):
     start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
     end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
 
-    all_contacts = Contact.objects.filter(submitted_at__range=[start_date, end_date], archived=False).order_by('-submitted_at')
+    all_contacts = Contact.objects.filter(submitted_at__range=[start_date, end_date], archived=False).order_by('-submitted_at', F('-project_id').desc(nulls_last=True))
 
     if search:
         search_lower = search.lower()
