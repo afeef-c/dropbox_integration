@@ -17,6 +17,7 @@ urlpatterns = [
 
     path('submit_form_data_v2', submit_form_data_v2, name='submit_form_data_v2'),
     path('submit_agreement_v2', submit_agreement_v2, name='submit_agreement_v2'),
+    path('submit_client_signature_form_data_v2', submit_client_signature_form_data_v2, name='submit_client_signature_form_data_v2'),
     path('submit_client_signature_v2', submit_client_signature_v2, name='submit_client_signature_v2'),
     path('current_client_v2/<str:contact_id>', current_client_v2, name='current_client_v2'),
     path('get_gantt_chart_v2/<str:contact_id>', get_gantt_chart_v2, name='get_gantt_chart_v2'),

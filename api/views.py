@@ -2063,6 +2063,27 @@ def submit_form_data_v2(request):
                 defaults=defaults
             )
 
+            if new_contact.representative_signed_date and new_contact.client_signed_date and not new_contact.project_id:
+                current_year = datetime.datetime.now().year
+                # Extract last two digits of the year
+                year_short = str(current_year)[-2:]
+                # Find the project with the largest sequence number for the current year
+                last_project = Contact.objects.filter(project_id__startswith=year_short).order_by('-project_id').first()
+
+                if last_project:
+                    # Extract the sequence number from the project_id (e.g., 24-001 -> 001)
+                    last_sequence = int(last_project.project_id.split('-')[1])
+                    next_sequence = last_sequence + 1
+                else:
+                    # If no project exists for the current year, start with 1
+                    next_sequence = 1
+
+                # Generate the new project_id in the format YY-XXX
+                project_id = f"{year_short}-{str(next_sequence).zfill(3)}"
+
+                new_contact.project_id = project_id
+                new_contact.save()
+
             print('contact created')
             serializer = ContactSerializerV2(new_contact)
             return Response({'data': serializer.data}, status=status.HTTP_200_OK)
@@ -2194,6 +2215,27 @@ def submit_form_data_v2(request):
                 contact_id=contact_id,
                 defaults=defaults
             )
+
+            if update_contact.representative_signed_date and update_contact.client_signed_date and not update_contact.project_id:
+                current_year = datetime.datetime.now().year
+                # Extract last two digits of the year
+                year_short = str(current_year)[-2:]
+                # Find the project with the largest sequence number for the current year
+                last_project = Contact.objects.filter(project_id__startswith=year_short).order_by('-project_id').first()
+
+                if last_project:
+                    # Extract the sequence number from the project_id (e.g., 24-001 -> 001)
+                    last_sequence = int(last_project.project_id.split('-')[1])
+                    next_sequence = last_sequence + 1
+                else:
+                    # If no project exists for the current year, start with 1
+                    next_sequence = 1
+
+                # Generate the new project_id in the format YY-XXX
+                project_id = f"{year_short}-{str(next_sequence).zfill(3)}"
+
+                update_contact.project_id = project_id
+                update_contact.save()
             
             serializer = ContactSerializerV2(update_contact)
             return Response({'data': serializer.data}, status=status.HTTP_200_OK)
@@ -2348,3 +2390,52 @@ def open_projects_gantt_chart(request):
         payload['tasks'].append(task_data)
 
     return Response(payload, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])  # Enables file upload support
+def submit_client_signature_form_data_v2(request):
+    print(request.data)
+    form_data = request.data
+
+
+    client_signature = request.FILES.get('signature')
+    
+    # Extract form data from the parsed JSON
+    contact_id = form_data.get('contact_id')
+    contact = Contact.objects.get(contact_id=contact_id)
+
+    location = Location.objects.first()
+    location_timezone = location.timezone
+
+    timezone = pytz.timezone(location_timezone)
+    submitted_at = datetime.datetime.now(timezone).replace(tzinfo=None)
+
+
+    if client_signature and client_signature != 'null':
+        
+        contact.client_signed_date = submitted_at.date()
+        contact.save()
+    
+    if contact.representative_signed_date and contact.client_signed_date and not contact.project_id:
+        current_year = datetime.datetime.now().year
+        # Extract last two digits of the year
+        year_short = str(current_year)[-2:]
+        # Find the project with the largest sequence number for the current year
+        last_project = Contact.objects.filter(project_id__startswith=year_short).order_by('-project_id').first()
+
+        if last_project:
+            # Extract the sequence number from the project_id (e.g., 24-001 -> 001)
+            last_sequence = int(last_project.project_id.split('-')[1])
+            next_sequence = last_sequence + 1
+        else:
+            # If no project exists for the current year, start with 1
+            next_sequence = 1
+
+        # Generate the new project_id in the format YY-XXX
+        project_id = f"{year_short}-{str(next_sequence).zfill(3)}"
+
+        contact.project_id = project_id
+        contact.save()
+
+    serializer = ContactSerializerV2(contact)
+    return Response({'data': serializer.data}, status=status.HTTP_200_OK)
