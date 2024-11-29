@@ -1922,11 +1922,19 @@ def submit_form_data_v2(request):
 
     if client_signature and client_signature != 'null':
         # defaults['client_signature'] = client_signature
-        defaults['client_signed_date'] = submitted_at.date()
+        if contact_id:
+            if not Contact.objects.get(contact_id=contact_id).client_signed_date:
+                defaults['client_signed_date'] = submitted_at.date()
+        else:
+            defaults['client_signed_date'] = submitted_at.date()
 
     if representative_signature and representative_signature != 'null':
         # defaults['representative_signature'] = representative_signature
-        defaults['representative_signed_date'] = submitted_at.date()
+        if contact_id:
+            if not Contact.objects.get(contact_id=contact_id).representative_signed_date:
+                defaults['representative_signed_date'] = submitted_at.date()
+        else:
+            defaults['representative_signed_date'] = submitted_at.date()
     
     # if agreement:
     #     defaults['pdf'] = agreement
