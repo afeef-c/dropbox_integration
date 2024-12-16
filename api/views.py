@@ -217,7 +217,7 @@ def current_clients(request):
 
         all_contacts = Contact.objects.filter(submitted_at__range=[start_date, end_date], archived=False).order_by('-submitted_at', F('project_id').desc(nulls_first=True))
     else:
-        all_contacts = Contact.objects.filter(archived=False).order_by('-submitted_at', F('project_id').desc(nulls_first=True))
+        all_contacts = Contact.objects.filter(archived=False).exclude(submitted_at__isnull=True).order_by('-submitted_at', F('project_id').desc(nulls_first=True))
 
     if search:
         search_lower = search.lower()
