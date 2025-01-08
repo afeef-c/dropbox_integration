@@ -2331,7 +2331,15 @@ def update_task(request, task_id):
     task.due_date = data['end']
     task.save()
 
+    date_obj = datetime.datetime.strptime(data['end'], "%Y-%m-%d")
+    # Add time to make it 23:59:00
+    date_with_time = date_obj + timedelta(hours=23, minutes=59)
+    # Convert back to string in the desired format
+    due_date = date_with_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
     contact = task.contact
+
+    update_ghl_task(contact.location_id, contact.contact_id, task_id, due_date)
 
     all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
     payload = {
@@ -2358,6 +2366,36 @@ def update_task(request, task_id):
         payload['tasks'].append(task_data)
 
     return Response(payload, status=status.HTTP_200_OK)
+
+def update_ghl_task(location_id, contact_id, task_id, due_date):
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+
+    location = Location.objects.get(locationId = location_id)
+    access_token = location.access_token
+
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}/tasks/{task_id}"
+
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Version": "2021-07-28"
+    }
+    data = {
+        "dueDate": due_date,
+    }
+
+    response = requests.put(url, headers=headers, json=data)
+    if response.ok:
+        print('Task updated on GHL')
+    else:
+        print(response.status_code)
+        print(response.text)
+        print('Failed to update GHL task due')
 
 @api_view(['GET'])
 def open_projects_gantt_chart(request):
