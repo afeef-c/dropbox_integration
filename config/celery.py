@@ -16,7 +16,7 @@ app.config_from_object(settings, namespace='CELERY')
 app.conf.beat_schedule = {
     'schedule_all_data':{
         'task': 'api.tasks.get_and_update_all_task',
-        'schedule': crontab(minute=0, hour='*')
+        'schedule': crontab(minute='*/15', hour='*')
     }
 }
 
