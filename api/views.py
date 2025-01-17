@@ -346,6 +346,7 @@ def submit_form_data(request):
     other = form_data.get('other')
     describe_other = form_data.get('describe_other')
     project_amount = form_data.get('project_amount')
+    first_payment_amount = form_data.get('first_payment_amount')
 
     # // Billing Info
     payment_options = form_data.get('payment_option')
@@ -457,6 +458,7 @@ def submit_form_data(request):
         'other': other,
         'describe_other': describe_other,
         'project_amount': project_amount,
+        'first_payment_amount': first_payment_amount,
         'payment_option': payment_options,
         'amount_to_charge_for_credit_card': amount_to_charge_for_credit_card,
         'card_holder_name': card_holder_name,
@@ -1657,6 +1659,18 @@ def ghl_webhook(request):
                 task.due_date = due_date_in_location_time_zone
                 task.save()
                 add_task_tag_to_ghl_contact(location_id, task.contact.contact_id, title)
+
+                # Get the next task based on the created_at timestamp
+                next_task = Task.objects.filter(
+                    contact=task.contact,
+                    created_at__gt=task.created_at  # Filter tasks created after the current task
+                ).order_by('created_at').first()  # Get the next task by ordering
+
+                if next_task:
+                    next_task_user_id = next_task.assigned_to_id
+                    next_task_title = next_task.name
+                    
+                    update_next_task_cfs(location_id, task.contact.contact_id, next_task_user_id, next_task_title)
                 print('Task completed')
 
     return Response('Success', status=status.HTTP_200_OK)
@@ -1716,6 +1730,85 @@ def add_task_tag_to_ghl_contact(location_id, contact_id, title):
             print(response.json())
     else:
         print('tag is empty')
+
+def update_next_task_cfs(location_id, contact_id, next_task_user_id, next_task_title):
+    all_custom_fields = get_all_custom_fields(location_id)
+    for field in all_custom_fields:
+        if field['name'] == 'Next Task User':
+            next_task_user_cf = field['id']
+        if field['name'] == 'Next Task Title':
+            next_task_title_cf = field['id']
+
+    user_email = User.objects.get(user_id=next_task_user_id).email
+
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+    
+    location = Location.objects.get(locationId = location_id) 
+    access_token = location.access_token
+
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Version": "2021-07-28"
+    }
+    data = {
+        "customFields": [
+
+            {
+                "id": next_task_user_cf,
+                "field_value": user_email
+            },
+            {
+                "id": next_task_title_cf,
+                "field_value": next_task_title
+            }
+        ]
+    }
+
+    response = requests.put(url, headers=headers, json=data)
+    if response.ok:
+        tags = ['next task notify']
+        add_tags(location_id, contact_id, tags)
+        print('next task notify added')
+    else:
+        print('failed to update next task CFs')
+        print(response.status_code)
+        print(response.json)
+
+def add_tags(location_id, contact_id, tags):
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+    
+    location = Location.objects.get(locationId = location_id) 
+    access_token = location.access_token
+
+    url = f'https://services.leadconnectorhq.com/contacts/{contact_id}/tags'
+    headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json',
+        'Version': '2021-07-28'
+    }
+
+    data = {
+        "tags": tags
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code == 201:
+        print('tags added')
+    else:
+        print('failed to add tags')
+
 
 @api_view(['GET'])
 def get_gantt_chart(request, project_id):
@@ -1788,6 +1881,7 @@ def submit_form_data_v2(request):
     other = form_data.get('other')
     describe_other = form_data.get('describe_other')
     project_amount = form_data.get('project_amount')
+    first_payment_amount = form_data.get('first_payment_amount')
 
     # // Billing Info
     payment_options = form_data.get('payment_option')
@@ -1901,6 +1995,7 @@ def submit_form_data_v2(request):
         'other': other,
         'describe_other': describe_other,
         'project_amount': project_amount,
+        'first_payment_amount': first_payment_amount,
         'payment_option': payment_options,
         'amount_to_charge_for_credit_card': amount_to_charge_for_credit_card,
         'card_holder_name': card_holder_name,

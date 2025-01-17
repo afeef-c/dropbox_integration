@@ -42,6 +42,7 @@ class Contact(models.Model):
     other = models.FloatField(null=True, blank=True)
     describe_other = models.CharField(max_length=700, null=True, blank=True)
     project_amount = models.FloatField(null=True, blank=True)
+    first_payment_amount = models.FloatField(null=True, blank=True)
     payment_option = models.CharField(max_length=700, null=True, blank=True)
     amount_to_charge_for_credit_card = models.FloatField(null=True, blank=True)
     card_holder_name = models.CharField(max_length=700, null=True, blank=True)
