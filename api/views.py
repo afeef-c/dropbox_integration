@@ -15,7 +15,7 @@ import pytz
 import uuid
 from .serializers import *
 from django.db.models import Q
-from .tasks import historic_fetch, fetch_users_by_location, create_all_task
+from .tasks import historic_fetch, fetch_users_by_location, create_all_task, update_task_status
 import json
 from django.core.files.base import ContentFile
 import base64
@@ -1612,7 +1612,6 @@ def delete_current_client(request, project_id):
 
 @api_view(['POST'])
 def ghl_webhook(request):
-    print(request.data)
     data = request.data
     location_id = data.get('locationId')
     try:
@@ -1623,56 +1622,8 @@ def ghl_webhook(request):
     if location_timezone:
         type = data.get('type')
         if type == 'TaskComplete':
-            task_id = data.get('id')
-            try:
-                task = Task.objects.get(task_id=task_id)
-            except:
-                task = None
-                print('No task found')
+            update_task_status.delay(data)
             
-            if task:
-                user_id = data.get('assignedTo')
-                if user_id:
-                    assigned_user_name = User.objects.get(user_id=user_id).name
-                else:
-                    assigned_user_name = None
-                title = data.get('title')
-                due_date = data.get('dueDate')
-
-                try:
-                    naive_due_date = datetime.datetime.fromisoformat(due_date[:-1])
-                except:
-                    try:
-                        naive_due_date = datetime.datetime.strptime(due_date, '%Y-%m-%dT%H:%M:%S')
-                    except:
-                        naive_due_date = datetime.datetime.strptime(due_date, '%Y-%m-%d')
-
-                input_timezone = pytz.timezone("UTC")
-                due_date_obj = input_timezone.localize(naive_due_date)
-                target_timezone = pytz.timezone(location_timezone)
-                due_date_in_location_time_zone = due_date_obj.astimezone(target_timezone).replace(tzinfo=None).date()
-
-                task.completed = True
-                task.assigned_to_id = user_id
-                task.assigned_to = assigned_user_name
-                task.name = title
-                task.due_date = due_date_in_location_time_zone
-                task.save()
-                add_task_tag_to_ghl_contact(location_id, task.contact.contact_id, title)
-
-                # Get the next task based on the created_at timestamp
-                next_task = Task.objects.filter(
-                    contact=task.contact,
-                    created_at__gt=task.created_at  # Filter tasks created after the current task
-                ).order_by('created_at').first()  # Get the next task by ordering
-
-                if next_task:
-                    next_task_user_id = next_task.assigned_to_id
-                    next_task_title = next_task.name
-                    
-                    update_next_task_cfs(location_id, task.contact.contact_id, next_task_user_id, next_task_title)
-                print('Task completed')
-
     return Response('Success', status=status.HTTP_200_OK)
 
 def add_task_tag_to_ghl_contact(location_id, contact_id, title):

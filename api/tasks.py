@@ -9,6 +9,7 @@ import datetime
 from datetime import timedelta
 from datetime import timezone as tzone
 import pytz
+import time
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
 def historic_fetch(self, *args):
@@ -760,3 +761,200 @@ def get_and_update_all_task(self, *args):
                         is_task.save()
         else:
             print(response.json())
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def update_task_status(self, data, *args):
+    time.sleep(10)
+    print(data)
+
+    location_id = data.get('locationId')
+    try:
+        location_timezone = Location.objects.get(locationId = location_id).timezone
+    except:
+        location_timezone = None
+
+    task_id = data.get('id')
+    try:
+        task = Task.objects.get(task_id=task_id)
+    except:
+        task = None
+        print('No task found')
+    
+    if task:
+        user_id = data.get('assignedTo')
+        if user_id:
+            assigned_user_name = User.objects.get(user_id=user_id).name
+        else:
+            assigned_user_name = None
+        title = data.get('title')
+        due_date = data.get('dueDate')
+
+        try:
+            naive_due_date = datetime.datetime.fromisoformat(due_date[:-1])
+        except:
+            try:
+                naive_due_date = datetime.datetime.strptime(due_date, '%Y-%m-%dT%H:%M:%S')
+            except:
+                naive_due_date = datetime.datetime.strptime(due_date, '%Y-%m-%d')
+
+        input_timezone = pytz.timezone("UTC")
+        due_date_obj = input_timezone.localize(naive_due_date)
+        target_timezone = pytz.timezone(location_timezone)
+        due_date_in_location_time_zone = due_date_obj.astimezone(target_timezone).replace(tzinfo=None).date()
+
+        task.completed = True
+        task.assigned_to_id = user_id
+        task.assigned_to = assigned_user_name
+        task.name = title
+        task.due_date = due_date_in_location_time_zone
+        task.save()
+        add_task_tag_to_ghl_contact(location_id, task.contact.contact_id, title)
+
+        # Get the next task based on the created_at timestamp
+        next_task = Task.objects.filter(
+            contact=task.contact,
+            created_at__gt=task.created_at  # Filter tasks created after the current task
+        ).order_by('created_at').first()  # Get the next task by ordering
+
+        if next_task:
+            next_task_user_id = next_task.assigned_to_id
+            next_task_title = next_task.name
+            
+            update_next_task_cfs(location_id, task.contact.contact_id, next_task_user_id, next_task_title)
+        print('Task completed')
+
+
+def add_task_tag_to_ghl_contact(location_id, contact_id, title):
+    if title == 'Contract signed & numbered':
+        tag = ['contract signed']
+    elif title == 'Emailed to PM & Office':
+        tag = ['emailed to pm']
+    elif title == 'PM to call client for intro':
+        tag = ['pm to call client']
+    elif title == 'Initial payment captured':
+        tag = ['initial payment']
+    elif title == 'Site plan completed':
+        tag = ['site plan']
+    elif title == 'HP Sign-Off (Notify Office & PP)':
+        tag = ['hp sign-off']
+    elif title == 'HP Created for PP':
+        tag = ['hp created']
+    elif title == 'PP Sign-Off (Notify office)':
+        tag = ['pp sign-off']
+    elif title == 'Layout Final set of plans on Borders':
+        tag = ['layout final']
+    elif title == 'QC Tech sheets (Notify PM & Gio)':
+        tag = ['qc tech']
+    elif title == 'Final plan presentation':
+        tag = ['final plan']
+    else:
+        tag = []
+
+    if tag:
+        check_is_token_expired = checking_token_expiration(location_id)
+        if check_is_token_expired:
+            refresh_the_tokens = refreshing_tokens(location_id)
+        else:
+            pass
+
+        location = Location.objects.get(locationId = location_id)
+        access_token = location.access_token
+
+        url = f"https://services.leadconnectorhq.com/contacts/{contact_id}/tags"
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "Version": "2021-07-28"
+        }
+        data = {
+            "tags": tag
+        }
+
+        response = requests.post(url, headers=headers, json=data)
+        if response.ok:
+            print('Task tag added')
+        else:
+            print('Failed to add Task tag')
+            print(response.json())
+    else:
+        print('tag is empty')
+
+def update_next_task_cfs(location_id, contact_id, next_task_user_id, next_task_title):
+    all_custom_fields = get_all_custom_fields(location_id)
+    for field in all_custom_fields:
+        if field['name'] == 'Next Task User':
+            next_task_user_cf = field['id']
+        if field['name'] == 'Next Task Title':
+            next_task_title_cf = field['id']
+
+    user_email = User.objects.get(user_id=next_task_user_id).email
+
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+    
+    location = Location.objects.get(locationId = location_id) 
+    access_token = location.access_token
+
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Version": "2021-07-28"
+    }
+    data = {
+        "customFields": [
+
+            {
+                "id": next_task_user_cf,
+                "field_value": user_email
+            },
+            {
+                "id": next_task_title_cf,
+                "field_value": next_task_title
+            }
+        ]
+    }
+
+    response = requests.put(url, headers=headers, json=data)
+    if response.ok:
+        tags = ['next task notify']
+        add_tags(location_id, contact_id, tags)
+        print('next task notify added')
+    else:
+        print('failed to update next task CFs')
+        print(response.status_code)
+        print(response.json)
+
+def add_tags(location_id, contact_id, tags):
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+    
+    location = Location.objects.get(locationId = location_id) 
+    access_token = location.access_token
+
+    url = f'https://services.leadconnectorhq.com/contacts/{contact_id}/tags'
+    headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json',
+        'Version': '2021-07-28'
+    }
+
+    data = {
+        "tags": tags
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code == 201:
+        print('tags added')
+    else:
+        print('failed to add tags')
