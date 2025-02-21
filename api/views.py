@@ -15,7 +15,7 @@ import pytz
 import uuid
 from .serializers import *
 from django.db.models import Q
-from .tasks import historic_fetch, fetch_users_by_location, create_all_task, update_task_status
+from .tasks import historic_fetch, fetch_users_by_location, create_all_task, update_task_status, wait_task
 import json
 from django.core.files.base import ContentFile
 import base64
@@ -24,6 +24,7 @@ from django.core.files.storage import default_storage
 import os
 from PIL import Image
 from django.db.models import Count, Case, When, IntegerField, Min, Max, F
+from celery import chain
 
 # Create your views here.
 
@@ -1622,7 +1623,8 @@ def ghl_webhook(request):
     if location_timezone:
         type = data.get('type')
         if type == 'TaskComplete':
-            update_task_status.delay(data)
+            # update_task_status.delay(data)
+            chain(update_task_status.s(data), wait_task.s())()
             
     return Response('Success', status=status.HTTP_200_OK)
 

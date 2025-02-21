@@ -762,10 +762,14 @@ def get_and_update_all_task(self, *args):
         else:
             print(response.json())
 
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def wait_task(self, *args):
+    print("Waiting for 10 seconds before processing next task...")
+    time.sleep(10)
+
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
 def update_task_status(self, data, *args):
-    time.sleep(10)
     print(data)
 
     location_id = data.get('locationId')
