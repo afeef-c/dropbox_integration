@@ -689,6 +689,7 @@ def get_and_update_all_task(self, *args):
     location_timezone = location.timezone
 
     unique_contact_ids = Task.objects.values_list('contact__contact_id', flat=True).distinct()
+    print(f'Contacts count: {len(unique_contact_ids)}')
 
     for contact_id in unique_contact_ids:
         check_is_token_expired = checking_token_expiration(location_id)
