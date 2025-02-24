@@ -2375,9 +2375,6 @@ def get_gantt_chart_v2(request, contact_id):
 def update_task(request, task_id):
     task = Task.objects.get(task_id=task_id)
     data = request.data
-    task.start_date = data['start']
-    task.due_date = data['end']
-    task.save()
 
     date_obj = datetime.datetime.strptime(data['end'], "%Y-%m-%d")
     # Add time to make it 23:59:00
@@ -2387,7 +2384,12 @@ def update_task(request, task_id):
 
     contact = task.contact
 
-    update_ghl_task(contact.location_id, contact.contact_id, task_id, due_date)
+    is_ghl_task_update = update_ghl_task(contact.location_id, contact.contact_id, task_id, due_date)
+    if is_ghl_task_update:
+        task.start_date = data['start']
+        task.due_date = data['end']
+        task.save()
+
 
     all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
     payload = {
@@ -2440,10 +2442,12 @@ def update_ghl_task(location_id, contact_id, task_id, due_date):
     response = requests.put(url, headers=headers, json=data)
     if response.ok:
         print('Task updated on GHL')
+        return True
     else:
         print(response.status_code)
         print(response.text)
         print('Failed to update GHL task due')
+        return False
 
 @api_view(['GET'])
 def open_projects_gantt_chart(request):
