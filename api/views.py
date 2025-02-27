@@ -2384,6 +2384,8 @@ def get_gantt_chart_v2(request, contact_id):
 
 @api_view(['POST'])
 def update_task(request, task_id):
+    pst = pytz.timezone("America/Los_Angeles")
+
     task = Task.objects.get(task_id=task_id)
     data = request.data
 
@@ -2391,15 +2393,17 @@ def update_task(request, task_id):
 
     date_obj = datetime.datetime.strptime(data['end'], "%Y-%m-%d")
     # Add time to make it 23:59:00
-    date_with_time = date_obj + timedelta(hours=23, minutes=59)
-    # Convert back to string in the desired format
-    due_date = date_with_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    date_with_time = date_obj + timedelta(hours=20, minutes=59)
+    # Localize to PST/PDT
+    date_with_time_pst = pst.localize(date_with_time, is_dst=None)
+    # Convert to ISO format with timezone offset
+    due_date_pst = date_with_time_pst.strftime("%Y-%m-%dT%H:%M:%S%z")
 
-    print(f'date_with_time: {date_with_time}')
+    print(f'date_with_time: {due_date_pst}')
 
     contact = task.contact
 
-    is_ghl_task_update = update_ghl_task(contact.location_id, contact.contact_id, task_id, due_date)
+    is_ghl_task_update = update_ghl_task(contact.location_id, contact.contact_id, task_id, due_date_pst)
     if is_ghl_task_update:
         task.start_date = data['start']
         task.due_date = data['end']
