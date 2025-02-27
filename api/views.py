@@ -2387,11 +2387,15 @@ def update_task(request, task_id):
     task = Task.objects.get(task_id=task_id)
     data = request.data
 
+    print(data)
+
     date_obj = datetime.datetime.strptime(data['end'], "%Y-%m-%d")
     # Add time to make it 23:59:00
     date_with_time = date_obj + timedelta(hours=23, minutes=59)
     # Convert back to string in the desired format
     due_date = date_with_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    print(f'date_with_time: {date_with_time}')
 
     contact = task.contact
 
