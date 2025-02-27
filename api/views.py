@@ -23,8 +23,9 @@ from io import BytesIO
 from django.core.files.storage import default_storage
 import os
 from PIL import Image
-from django.db.models import Count, Case, When, IntegerField, Min, Max, F
+from django.db.models import Count, Case, When, IntegerField, Min, Max, F, Value
 from celery import chain
+from django.db.models.functions import Replace, Trim
 
 # Create your views here.
 
@@ -221,11 +222,21 @@ def current_clients(request):
         all_contacts = Contact.objects.filter(archived=False).exclude(submitted_at__isnull=True).order_by('-submitted_at', F('project_id').desc(nulls_first=True))
 
     if search:
-        search_lower = search.lower()
-        all_contacts = all_contacts.filter(
-            Q(name__istartswith=search_lower) |
-            Q(primary_email__istartswith=search_lower) |
-            Q(primary_phone__istartswith=search_lower)
+        # search_lower = search.lower()
+        # all_contacts = all_contacts.filter(
+        #     Q(name__istartswith=search_lower) |
+        #     Q(primary_email__istartswith=search_lower) |
+        #     Q(primary_phone__istartswith=search_lower)
+        # )
+
+        search_cleaned = " ".join(search.split())  # Remove extra spaces from search input
+        all_contacts = all_contacts.annotate(
+            name_trimmed=Trim(Replace(Replace('name', Value("  "), Value(" ")), Value("  "), Value(" ")))
+        ).filter(
+            Q(name_trimmed__icontains=search_cleaned) |
+            Q(project_id__istartswith=search_cleaned) |
+            Q(primary_email__istartswith=search_cleaned) |
+            Q(primary_phone__istartswith=search_cleaned)
         )
     else:
         all_contacts = all_contacts
