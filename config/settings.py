@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from decouple import config
+from datetime import timedelta
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,6 +46,10 @@ INSTALLED_APPS = [
     'api',
     'django_celery_beat',
     'django_celery_results',
+    'rest_framework_simplejwt',
+    'authentication',
+    'rest_framework_simplejwt.token_blacklist',
+
 ]
 
 MIDDLEWARE = [
@@ -59,9 +65,11 @@ MIDDLEWARE = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.BasicAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-    ]
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ], 
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
 }
 
 ROOT_URLCONF = 'config.urls'
@@ -169,3 +177,16 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB
 
 # Increase the maximum POST size if necessary
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB
+
+
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": True,  # Token Rotation
+    "BLACKLIST_AFTER_ROTATION": True,  # Blacklist old refresh tokens on logout
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+}
+
+AUTH_USER_MODEL = 'authentication.CustomUser'

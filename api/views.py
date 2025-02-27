@@ -1,7 +1,7 @@
 from django.shortcuts import render
 import requests
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, parser_classes
+from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
@@ -25,13 +25,17 @@ import os
 from PIL import Image
 from django.db.models import Count, Case, When, IntegerField, Min, Max, F
 from celery import chain
+from rest_framework.permissions import IsAuthenticated
 
 # Create your views here.
-
+@api_view(['GET', 'POST']) 
+@permission_classes([IsAuthenticated])
 def onboarding_page(request):
    
    return render(request,'onboard.html')
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def validation(request):
     if request.method == 'POST':
         location_id = request.POST.get('locationId')
@@ -90,6 +94,8 @@ def validation(request):
 
     return JsonResponse({'success':False, 'message':'Only POST request allowed'}, safe=False)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_location_details(location_id, access_token):
 
     url = f"https://services.leadconnectorhq.com/locations/{location_id}"
@@ -107,6 +113,8 @@ def get_location_details(location_id, access_token):
         location = data['location']
         return location
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def checking_token_expiration(location_id):
     location = Location.objects.get(locationId = location_id)
 
@@ -120,7 +128,9 @@ def checking_token_expiration(location_id):
             return True
         
     return False
-    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def refreshing_tokens(location_id):
 
     client_id = settings.CLIENT_ID
@@ -159,6 +169,8 @@ def refreshing_tokens(location_id):
     else:
         return False
     
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_all_custom_fields(location_id):
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -191,18 +203,21 @@ def get_all_custom_fields(location_id):
        return None
     
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def current_client(request, project_id):
     contact = Contact.objects.get(project_id=project_id)
     serializer = ContactSerializerV2(contact)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def current_client_v2(request, contact_id):
     contact = Contact.objects.get(contact_id=contact_id)
     serializer = ContactSerializerV2(contact)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
     
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def current_clients(request):
     limit = request.GET.get('limit', 10)
     offset = request.GET.get('offset', 0)
@@ -276,6 +291,7 @@ def current_clients(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_agreement(request):
     # Extract form data
@@ -309,6 +325,7 @@ def _decode_base64_image(base64_str):
     return ContentFile(img_data, name=f'signature.{ext}')
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_form_data(request):
     print(request.data)
@@ -787,7 +804,10 @@ def submit_form_data(request):
             print(error_response)
             message = error_response.get('message')
             return Response(message, status=status.HTTP_400_BAD_REQUEST)
-        
+
+
+@api_view(['PUT', 'GET'])
+@permission_classes([IsAuthenticated])
 def update_contact_file_customfields(location_id, contact_id, client_signature_cf=None, representative_signature_cf=None, agreement_cf=None):
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -875,7 +895,10 @@ def update_contact_file_customfields(location_id, contact_id, client_signature_c
             print('Failed to update custom fields')
     else:
         print('No custom fields to update')
-        
+    
+
+@api_view(['PUT', 'GET'])
+@permission_classes([IsAuthenticated])
 def update_contact_client_signatures(location_id, contact_id, client_signature_cf):
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -925,6 +948,9 @@ def update_contact_client_signatures(location_id, contact_id, client_signature_c
     else:
         print('Failed to upload Client signatures')
 
+
+@api_view(['PUT', 'GET'])
+@permission_classes([IsAuthenticated])
 def update_contact_representative_signatures(location_id, contact_id, representative_signature_cf):
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -974,6 +1000,9 @@ def update_contact_representative_signatures(location_id, contact_id, representa
     else:
         print('Failed to upload Representative signatures')
 
+
+@api_view(['PUT', 'GET'])
+@permission_classes([IsAuthenticated])
 def update_contact_signatures(location_id, contact_id, client_signature_cf, representative_signature_cf):
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -1043,6 +1072,9 @@ def update_contact_signatures(location_id, contact_id, client_signature_cf, repr
         print('Failed to upload signatures')
 
 
+
+@api_view(['PUT', 'GET'])
+@permission_classes([IsAuthenticated])
 def update_contact_agreement(location_id, contact_id, agreement_cf):
 
     check_is_token_expired = checking_token_expiration(location_id)
@@ -1095,11 +1127,13 @@ def update_contact_agreement(location_id, contact_id, agreement_cf):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def historic(request):
     historic_fetch.delay()
     return Response('started', status=status.HTTP_200_OK)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def fetch_users(request):
     location = Location.objects.first()
     location_id = location.locationId
@@ -1107,6 +1141,7 @@ def fetch_users(request):
     return Response('started', status=status.HTTP_200_OK)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_agreement_v2(request):
     print(request.data)
@@ -1202,7 +1237,8 @@ def submit_agreement_v2(request):
     else:
         return Response('Failed to upload the files to CF', status=400)
 
-
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
 def upload_agreement_file(contact_id):
     location = Location.objects.first()
     location_id = location.locationId
@@ -1233,6 +1269,9 @@ def upload_agreement_file(contact_id):
         print(response.json())
         return False
 
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
 def get_agreement_file(contact_id, media_file):
     location = Location.objects.first()
     location_id = location.locationId
@@ -1271,6 +1310,10 @@ def get_agreement_file(contact_id, media_file):
     else:
         return False
     
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])    
 def upload_signature_file(contact_id, filename):
     location = Location.objects.first()
     location_id = location.locationId
@@ -1301,6 +1344,9 @@ def upload_signature_file(contact_id, filename):
         print(response.json())
         return False
 
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
 def get_signature_file(contact_id, media_file, filename):
     location = Location.objects.first()
     location_id = location.locationId
@@ -1338,7 +1384,10 @@ def get_signature_file(contact_id, media_file, filename):
         }
     else:
         return False
-    
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
 def update_contact_file_customfields_v2(contact_id, agreement_file_link, client_signature_link, representative_signature_link):
     location = Location.objects.first()
     location_id = location.locationId
@@ -1437,6 +1486,7 @@ def update_contact_file_customfields_v2(contact_id, agreement_file_link, client_
         return False
     
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_client_signature_v2(request):
     form_data = request.data
@@ -1503,6 +1553,7 @@ def submit_client_signature_v2(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_client_signature(request):
     form_data = request.data
@@ -1569,6 +1620,7 @@ def submit_client_signature(request):
         return Response('Failed to upload the files to CF', status=400)
     
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def delete_current_client_v2(request, contact_id):
     contact = Contact.objects.get(contact_id=contact_id)
     contact.archived = True
@@ -1576,6 +1628,8 @@ def delete_current_client_v2(request, contact_id):
     add_archieved_tag_to_ghl(contact.location_id, contact_id)
     return Response('success', status=status.HTTP_200_OK)
 
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
 def add_archieved_tag_to_ghl(location_id, contact_id):
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -1605,6 +1659,7 @@ def add_archieved_tag_to_ghl(location_id, contact_id):
         print(response.json())
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def delete_current_client(request, project_id):
     contact = Contact.objects.get(project_id=project_id)
     contact.archived = True
@@ -1612,6 +1667,7 @@ def delete_current_client(request, project_id):
     return Response('success', status=status.HTTP_200_OK)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def ghl_webhook(request):
     data = request.data
     location_id = data.get('locationId')
@@ -1628,6 +1684,8 @@ def ghl_webhook(request):
             
     return Response('Success', status=status.HTTP_200_OK)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_task_tag_to_ghl_contact(location_id, contact_id, title):
     if title == 'Contract signed & numbered':
         tag = ['contract signed']
@@ -1684,6 +1742,8 @@ def add_task_tag_to_ghl_contact(location_id, contact_id, title):
     else:
         print('tag is empty')
 
+@api_view(['PUT', 'GET'])
+@permission_classes([IsAuthenticated])
 def update_next_task_cfs(location_id, contact_id, next_task_user_id, next_task_title):
     all_custom_fields = get_all_custom_fields(location_id)
     for field in all_custom_fields:
@@ -1734,6 +1794,8 @@ def update_next_task_cfs(location_id, contact_id, next_task_user_id, next_task_t
         print(response.status_code)
         print(response.json)
 
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
 def add_tags(location_id, contact_id, tags):
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -1764,6 +1826,7 @@ def add_tags(location_id, contact_id, tags):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_gantt_chart(request, project_id):
     contact = Contact.objects.get(project_id=project_id)
     all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
@@ -1794,6 +1857,7 @@ def get_gantt_chart(request, project_id):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_form_data_v2(request):
     print(request.data)
@@ -2304,7 +2368,8 @@ def submit_form_data_v2(request):
             message = error_response.get('message')
             return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-
+@api_view(['PUT', 'GET'])
+@permission_classes([IsAuthenticated])
 def update_client_signature_form_link_cf(location_id, contact_id, client_signature_form_link_cf, client_signature_form_link):
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -2342,6 +2407,7 @@ def update_client_signature_form_link_cf(location_id, contact_id, client_signatu
         print('Failed to update client_signature_form_link')
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_gantt_chart_v2(request, contact_id):
     contact = Contact.objects.get(contact_id=contact_id)
     all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
@@ -2372,6 +2438,7 @@ def get_gantt_chart_v2(request, contact_id):
     return Response(payload, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def update_task(request, task_id):
     task = Task.objects.get(task_id=task_id)
     data = request.data
@@ -2417,6 +2484,8 @@ def update_task(request, task_id):
 
     return Response(payload, status=status.HTTP_200_OK)
 
+@api_view(['PUT', 'GET'])
+@permission_classes([IsAuthenticated])
 def update_ghl_task(location_id, contact_id, task_id, due_date):
     check_is_token_expired = checking_token_expiration(location_id)
     if check_is_token_expired:
@@ -2450,6 +2519,7 @@ def update_ghl_task(location_id, contact_id, task_id, due_date):
         return False
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def open_projects_gantt_chart(request):
     # Filter contacts with at least one incomplete task
 
@@ -2493,6 +2563,7 @@ def open_projects_gantt_chart(request):
     return Response(payload, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_client_signature_form_data_v2(request):
     print(request.data)
