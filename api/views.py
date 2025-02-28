@@ -23,9 +23,10 @@ from io import BytesIO
 from django.core.files.storage import default_storage
 import os
 from PIL import Image
-from django.db.models import Count, Case, When, IntegerField, Min, Max, F
+from django.db.models import Count, Case, When, IntegerField, Min, Max, F, Value
 from celery import chain
 from rest_framework.permissions import IsAuthenticated
+from django.db.models.functions import Replace, Trim
 
 # Create your views here.
 @api_view(['GET', 'POST']) 
@@ -236,11 +237,21 @@ def current_clients(request):
         all_contacts = Contact.objects.filter(archived=False).exclude(submitted_at__isnull=True).order_by('-submitted_at', F('project_id').desc(nulls_first=True))
 
     if search:
-        search_lower = search.lower()
-        all_contacts = all_contacts.filter(
-            Q(name__istartswith=search_lower) |
-            Q(primary_email__istartswith=search_lower) |
-            Q(primary_phone__istartswith=search_lower)
+        # search_lower = search.lower()
+        # all_contacts = all_contacts.filter(
+        #     Q(name__istartswith=search_lower) |
+        #     Q(primary_email__istartswith=search_lower) |
+        #     Q(primary_phone__istartswith=search_lower)
+        # )
+
+        search_cleaned = " ".join(search.split())  # Remove extra spaces from search input
+        all_contacts = all_contacts.annotate(
+            name_trimmed=Trim(Replace(Replace('name', Value("  "), Value(" ")), Value("  "), Value(" ")))
+        ).filter(
+            Q(name_trimmed__icontains=search_cleaned) |
+            Q(project_id__istartswith=search_cleaned) |
+            Q(primary_email__istartswith=search_cleaned) |
+            Q(primary_phone__istartswith=search_cleaned)
         )
     else:
         all_contacts = all_contacts
@@ -2440,18 +2451,26 @@ def get_gantt_chart_v2(request, contact_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def update_task(request, task_id):
+    pst = pytz.timezone("America/Los_Angeles")
+
     task = Task.objects.get(task_id=task_id)
     data = request.data
 
+    print(data)
+
     date_obj = datetime.datetime.strptime(data['end'], "%Y-%m-%d")
     # Add time to make it 23:59:00
-    date_with_time = date_obj + timedelta(hours=23, minutes=59)
-    # Convert back to string in the desired format
-    due_date = date_with_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    date_with_time = date_obj + timedelta(hours=20, minutes=59)
+    # Localize to PST/PDT
+    date_with_time_pst = pst.localize(date_with_time, is_dst=None)
+    # Convert to ISO format with timezone offset
+    due_date_pst = date_with_time_pst.strftime("%Y-%m-%dT%H:%M:%S%z")
+
+    print(f'date_with_time: {due_date_pst}')
 
     contact = task.contact
 
-    is_ghl_task_update = update_ghl_task(contact.location_id, contact.contact_id, task_id, due_date)
+    is_ghl_task_update = update_ghl_task(contact.location_id, contact.contact_id, task_id, due_date_pst)
     if is_ghl_task_update:
         task.start_date = data['start']
         task.due_date = data['end']
