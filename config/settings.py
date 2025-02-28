@@ -181,7 +181,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB
 
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": True,  # Token Rotation
     "BLACKLIST_AFTER_ROTATION": True,  # Blacklist old refresh tokens on logout
