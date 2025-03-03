@@ -2401,6 +2401,7 @@ def update_task(request, task_id):
 
     print(f'date_with_time: {due_date_pst}')
 
+
     contact = task.contact
 
     is_ghl_task_update = update_ghl_task(contact.location_id, contact.contact_id, task_id, due_date_pst)
@@ -2435,6 +2436,107 @@ def update_task(request, task_id):
         payload['tasks'].append(task_data)
 
     return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def update_task_v2(request, task_id):
+    pst = pytz.timezone("America/Los_Angeles")
+
+    task = Task.objects.get(task_id=task_id)
+    data = request.data
+
+    print(data)
+
+    date_obj = datetime.datetime.strptime(data['end'], "%Y-%m-%d")
+    # Add time to make it 23:59:00
+    date_with_time = date_obj + timedelta(hours=20, minutes=59)
+    # Localize to PST/PDT
+    date_with_time_pst = pst.localize(date_with_time, is_dst=None)
+    # Convert to ISO format with timezone offset
+    due_date_pst = date_with_time_pst.strftime("%Y-%m-%dT%H:%M:%S%z")
+
+    print(f'date_with_time: {due_date_pst}')
+
+    user_id = data['user_id']
+    user_name = User.objects.get(user_id=user_id).name
+    progress = int(data['progress'])
+    if progress < 100:
+        is_complete = False
+    else:
+        is_complete = True
+
+    contact = task.contact
+
+    is_ghl_task_update = update_ghl_task_v2(contact.location_id, contact.contact_id, task_id, due_date_pst, user_id, is_complete)
+    if is_ghl_task_update:
+        task.start_date = data['start']
+        task.due_date = data['end']
+        task.assigned_to = user_name
+        task.assigned_to_id = user_id
+        task.completed = is_complete
+        task.save()
+
+
+    all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
+    payload = {
+        'project_id': contact.project_id,
+        'start': all_tasks.first().start_date,
+        'end': all_tasks.latest('due_date').due_date,
+        'tasks': []
+    }
+    order = 0
+    for task in all_tasks:
+        order += 1
+        task_data = {
+            'start': task.start_date,
+            'end': task.due_date,
+            'name': task.name,
+            'category': task.category,
+            'id': task.task_id,
+            'progress': 100 if task.completed else 0,
+            'assigned_user': task.assigned_to,
+            'type': 'task',
+            'displayOrder': order
+        }
+
+        payload['tasks'].append(task_data)
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+def update_ghl_task_v2(location_id, contact_id, task_id, due_date, user_id, is_complete):
+    check_is_token_expired = checking_token_expiration(location_id)
+    if check_is_token_expired:
+        refresh_the_tokens = refreshing_tokens(location_id)
+    else:
+        pass
+
+    location = Location.objects.get(locationId = location_id)
+    access_token = location.access_token
+
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}/tasks/{task_id}"
+
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Version": "2021-07-28"
+    }
+    data = {
+        "dueDate": due_date,
+        "assignedTo": user_id,
+        "completed": is_complete
+    }
+
+    response = requests.put(url, headers=headers, json=data)
+    if response.ok:
+        print('Task updated on GHL')
+        return True
+    else:
+        print(response.status_code)
+        print(response.text)
+        print('Failed to update GHL task due')
+        return False
 
 def update_ghl_task(location_id, contact_id, task_id, due_date):
     check_is_token_expired = checking_token_expiration(location_id)
@@ -2559,3 +2661,12 @@ def submit_client_signature_form_data_v2(request):
 
     serializer = ContactSerializerV2(contact)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def get_ghl_users(request):
+
+    all_users = User.objects.all()
+    serializer = GhlUserSerializer(all_users, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
