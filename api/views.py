@@ -2374,6 +2374,7 @@ def get_gantt_chart_v2(request, contact_id):
             'id': task.task_id,
             'progress': 100 if task.completed else 0,
             'assigned_user': task.assigned_to,
+            'assigned_user_id': task.assigned_to_id,
             'type': 'task',
             'displayOrder': order
         }
