@@ -2372,13 +2372,16 @@ def get_gantt_chart_v2(request, contact_id):
             'name': task.name,
             'category': task.category,
             'id': task.task_id,
-            'progress_percentage': task.progress,
-            'progress': 100 if task.completed else 0,
             'assigned_user': task.assigned_to,
             'assigned_user_id': task.assigned_to_id,
             'type': 'task',
             'displayOrder': order
         }
+
+        if task.progress:
+            task_data['progress'] = task.progress
+        else:
+            task_data['progress'] = 100 if task.completed else 0
 
         payload['tasks'].append(task_data)
 
@@ -2497,12 +2500,15 @@ def update_task_v2(request, task_id):
             'name': task.name,
             'category': task.category,
             'id': task.task_id,
-            'progress_percentage': task.progress,
-            'progress': 100 if task.completed else 0,
             'assigned_user': task.assigned_to,
             'type': 'task',
             'displayOrder': order
         }
+
+        if task.progress:
+            task_data['progress'] = task.progress
+        else:
+            task_data['progress'] = 100 if task.completed else 0
 
         payload['tasks'].append(task_data)
 
