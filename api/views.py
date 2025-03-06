@@ -2596,12 +2596,9 @@ def submit_client_signature_form_data_v2(request):
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
 
-from rest_framework.permissions import AllowAny
 
-logger = logging.getLogger(__name__)
 
 class CreditCardView(APIView):
-    permission_classes = [AllowAny]
     def post(self, request, contact_id):
         try:
             contact = Contact.objects.get(contact_id=contact_id)
@@ -2620,11 +2617,9 @@ class CreditCardView(APIView):
             try:
                 datetime.strptime(decrypted_data["expiration_date"], "%Y-%m-%d")
             except ValueError:
-                logger.error("Invalid expiration date format")
                 return Response({"error": "Invalid expiration date format"}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            logger.error(f"Decryption error: {e}")
             return Response({"error": "Failed to decrypt data"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Save or update CreditCard
