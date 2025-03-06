@@ -201,21 +201,21 @@ def get_all_custom_fields(location_id):
        return None
     
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 def current_client(request, project_id):
     contact = Contact.objects.get(project_id=project_id)
     serializer = ContactSerializerV2(contact)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 def current_client_v2(request, contact_id):
     contact = Contact.objects.get(contact_id=contact_id)
     serializer = ContactSerializerV2(contact)
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
     
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 def current_clients(request):
     limit = request.GET.get('limit', 10)
     offset = request.GET.get('offset', 0)
@@ -299,7 +299,7 @@ def current_clients(request):
 
 
 @api_view(['POST']) 
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_agreement(request):
     # Extract form data
@@ -332,8 +332,8 @@ def _decode_base64_image(base64_str):
     img_data = base64.b64decode(imgstr)
     return ContentFile(img_data, name=f'signature.{ext}')
 
-@api_view(['POST']) #
-@permission_classes([IsAuthenticated])
+@api_view(['POST']) 
+# @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_form_data(request):
     print(request.data)
@@ -1135,8 +1135,8 @@ def fetch_users(request):
     fetch_users_by_location.delay(location_id)
     return Response('started', status=status.HTTP_200_OK)
 
-@api_view(['POST']) #
-@permission_classes([IsAuthenticated])
+@api_view(['POST']) 
+# @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_agreement_v2(request):
     print(request.data)
@@ -1470,7 +1470,7 @@ def update_contact_file_customfields_v2(contact_id, agreement_file_link, client_
         return False
     
 @api_view(['POST'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_client_signature_v2(request):
     form_data = request.data
@@ -1537,7 +1537,7 @@ def submit_client_signature_v2(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_client_signature(request):
     form_data = request.data
@@ -1604,7 +1604,7 @@ def submit_client_signature(request):
         return Response('Failed to upload the files to CF', status=400)
     
 @api_view(['POST'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 def delete_current_client_v2(request, contact_id):
     contact = Contact.objects.get(contact_id=contact_id)
     contact.archived = True
@@ -1641,7 +1641,7 @@ def add_archieved_tag_to_ghl(location_id, contact_id):
         print(response.json())
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 def delete_current_client(request, project_id):
     contact = Contact.objects.get(project_id=project_id)
     contact.archived = True
@@ -1803,7 +1803,7 @@ def add_tags(location_id, contact_id, tags):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 def get_gantt_chart(request, project_id):
     contact = Contact.objects.get(project_id=project_id)
     all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
@@ -1834,7 +1834,7 @@ def get_gantt_chart(request, project_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_form_data_v2(request):
     print(request.data)
@@ -2383,7 +2383,7 @@ def update_client_signature_form_link_cf(location_id, contact_id, client_signatu
         print('Failed to update client_signature_form_link')
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 def get_gantt_chart_v2(request, contact_id):
     contact = Contact.objects.get(contact_id=contact_id)
     all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
@@ -2419,7 +2419,7 @@ def get_gantt_chart_v2(request, contact_id):
     return Response(payload, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 def update_task(request, task_id):
     pst = pytz.timezone("America/Los_Angeles")
 
@@ -2614,7 +2614,7 @@ def update_ghl_task(location_id, contact_id, task_id, due_date):
         return False
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 def open_projects_gantt_chart(request):
     # Filter contacts with at least one incomplete task
 
@@ -2658,7 +2658,7 @@ def open_projects_gantt_chart(request):
     return Response(payload, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated]) #
+# @permission_classes([IsAuthenticated]) 
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_client_signature_form_data_v2(request):
     print(request.data)
