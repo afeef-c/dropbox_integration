@@ -24,4 +24,5 @@ urlpatterns = [
     path('update_task/<str:task_id>', update_task, name='update_task'),
     path('open_projects_gantt_chart', open_projects_gantt_chart, name='open_projects_gantt_chart'),
     path('delete_current_client_v2/<str:contact_id>', delete_current_client_v2, name='delete_current_client_v2'),
+    path('credit_card/<str:contact_id>', CreditCardView.as_view(), name='credit_card_get'),
 ]

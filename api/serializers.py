@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.conf import settings
-from .models import Contact
+from .models import Contact, CreditCard
+# from .utils import encrypt_data
 
 class ContactSerializer(serializers.ModelSerializer):
     client_signature_url = serializers.SerializerMethodField()

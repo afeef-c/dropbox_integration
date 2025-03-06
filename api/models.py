@@ -97,3 +97,17 @@ class Task(models.Model):
     
     def __str__(self):
         return f"{self.contact.project_id} : {self.name}"
+    
+
+
+
+class CreditCard(models.Model):
+    contact = models.OneToOneField(Contact, on_delete=models.CASCADE, related_name='credit_card')
+    card_holder_name = models.CharField(max_length=700, null=True, blank=True)
+    credit_card_number = models.CharField(max_length=700, null=True, blank=True)
+    expiration_date = models.DateField(null=True, blank=True)
+    cvv = models.CharField(max_length=700, null=True, blank=True)
+
+
+    def __str__(self):
+        return f"Credit Card for {self.contact.contact_id}"

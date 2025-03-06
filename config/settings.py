@@ -14,7 +14,19 @@ from pathlib import Path
 import os
 from decouple import config
 from datetime import timedelta
+from dotenv import load_dotenv
+import base64
 
+load_dotenv()
+ENCRYPTION_SECRET_KEY = os.getenv("SECRET_ENCRYPTION_KEY")
+
+
+# if not SECRET_ENCRYPTION_KEY:
+#     raise ValueError("SECRET_ENCRYPTION_KEY is missing! Please add it to the .env file.")
+
+# if not SECRET_ENCRYPTION_KEY or len(base64.urlsafe_b64decode(SECRET_ENCRYPTION_KEY)) != 32:
+#     print("WARNING: SECRET_ENCRYPTION_KEY is not 32 bytes, generating a new key!!!!!!!!!!!!")
+#     SECRET_ENCRYPTION_KEY = base64.urlsafe_b64encode(os.urandom(32)).decode()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
