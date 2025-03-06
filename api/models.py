@@ -88,6 +88,7 @@ class Task(models.Model):
     assigned_to_id = models.CharField(max_length=700, null=True, blank=True)
     assigned_to = models.CharField(max_length=700, null=True, blank=True)
     completed = models.BooleanField(default=False)
+    progress = models.IntegerField(null=True, blank=True)
     start_date = models.DateField(null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -22,7 +22,10 @@ urlpatterns = [
     path('current_client_v2/<str:contact_id>', current_client_v2, name='current_client_v2'),
     path('get_gantt_chart_v2/<str:contact_id>', get_gantt_chart_v2, name='get_gantt_chart_v2'),
     path('update_task/<str:task_id>', update_task, name='update_task'),
+    path('update_task_v2/<str:task_id>', update_task_v2, name='update_task_v2'),
     path('open_projects_gantt_chart', open_projects_gantt_chart, name='open_projects_gantt_chart'),
     path('delete_current_client_v2/<str:contact_id>', delete_current_client_v2, name='delete_current_client_v2'),
     path('credit_card/<str:contact_id>', CreditCardView.as_view(), name='credit_card_get'),
+
+    path('get_ghl_users', get_ghl_users, name='get_ghl_users'),
 ]

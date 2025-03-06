@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from django.conf import settings
-from .models import Contact, CreditCard
-# from .utils import encrypt_data
+from .models import Contact, User
 
 class ContactSerializer(serializers.ModelSerializer):
     client_signature_url = serializers.SerializerMethodField()
@@ -77,3 +76,11 @@ class ContactSerializerV2(serializers.ModelSerializer):
         if obj.pdf:
             return f'{settings.BASE_URL}{obj.pdf.url}'
         return obj.pdf_url
+    
+
+class GhlUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+
+        fields = ['user_id', 'name']
