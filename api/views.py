@@ -2497,11 +2497,26 @@ def update_task_v2(request, task_id):
 
     user_id = data['user_id']
     user_name = User.objects.get(user_id=user_id).name
-    progress = int(data['progress'])
-    if progress < 100:
-        is_complete = False
-    else:
-        is_complete = True
+
+    if 'progress' in data:
+        try:
+            progress = int(data['progress'])
+        except ValueError:
+            return Response({"error": "Invalid progress value"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if progress < 100:
+            is_complete = False
+        else:
+            is_complete = True
+
+    elif 'is_complete' in data:
+        is_complete = data['is_complete']
+
+        if isinstance(is_complete, str):
+            is_complete = is_complete.lower() == 'true'
+
+        progress = 100 if is_complete else 0
+
 
     contact = task.contact
 
@@ -2711,6 +2726,7 @@ def submit_client_signature_form_data_v2(request):
 
 
 class CreditCardView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request, contact_id):
         try:
             contact = Contact.objects.get(contact_id=contact_id)

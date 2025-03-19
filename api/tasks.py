@@ -459,7 +459,7 @@ def create_all_task(self, contact_id, *args):
         {"category": "Sales", "task_name": "Questionnaire captured", "assigned_to": ["Courtney Smith"]},
         {"category": "Sales", "task_name": "House plans scanned (if applicable)", "assigned_to": ["Gio Leonardo"]},
         {"category": "Sales", "task_name": "Get Setbacks", "assigned_to": ["Courtney Smith"]},
-        {"category": "Measure", "task_name": "Schedule measure", "assigned_to": ["Julian Terrazas"]},
+        # {"category": "Measure", "task_name": "Schedule measure", "assigned_to": ["Julian Terrazas"]},
         {"category": "Measure", "task_name": "Measure/Prop Pics/Aerials", "assigned_to": ["Julian Terrazas"]},
         {"category": "Site Plan Created", "task_name": "Site plan completed", "assigned_to": ["Gio Leonardo", "Julian Terrazas"]},
         # {"category": "Hardscape", "task_name": "Monitor progress", "assigned_to": []},
