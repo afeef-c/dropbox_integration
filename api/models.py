@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 
 # Create your models here.
 
@@ -112,3 +113,14 @@ class CreditCard(models.Model):
 
     def __str__(self):
         return f"Credit Card for {self.contact.contact_id}"
+    
+
+
+
+class TaskTemplate(models.Model):
+    category = models.CharField(max_length=255)
+    task_name = models.CharField(max_length=255)
+    assigned_to = ArrayField(models.CharField(max_length=255), blank=True, default=list)
+
+    def __str__(self):
+        return f"{self.category} - {self.task_name}"
