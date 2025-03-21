@@ -1139,6 +1139,7 @@ def fetch_users(request):
 # @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])  # Enables file upload support
 def submit_agreement_v2(request):
+    print('submit_agreement_v2 function called')
     print(request.data)
     # Extract form data
     project_id = request.data.get('project_id')
@@ -1173,10 +1174,12 @@ def submit_agreement_v2(request):
 
     agreement_file = upload_agreement_file(contact_id)
     if not agreement_file:
+        print('Failed to upload the media file', 'Status = 400')
         return Response('Failed to upload the media file', status=400)
 
     agreement_file_details = get_agreement_file(contact_id, agreement_file)
     if not agreement_file_details:
+        print('Failed to get file details, status = 400')
         return Response('Failed to get file details', status=400)
     
     if client_signature and client_signature != 'null':
@@ -1188,10 +1191,12 @@ def submit_agreement_v2(request):
         client_signature_file_name = 'client_signature.png'
         client_signature_file = upload_signature_file(contact_id, client_signature_file_name)
         if not client_signature_file:
+            print("Failed to upload the client_signature file, status = 400")
             return Response('Failed to upload the client_signature file', status=400)
 
         client_signature_details = get_signature_file(contact_id, client_signature_file, client_signature_file_name)
         if not client_signature_details:
+            print('Failed to get client_signature file details, status = 400')
             return Response('Failed to get client_signature file details', status=400)
 
     if representative_signature and representative_signature != 'null':
@@ -1203,10 +1208,12 @@ def submit_agreement_v2(request):
         representative_signature_file_name = 'representative_signature.png'
         representative_signature_file = upload_signature_file(contact_id, representative_signature_file_name)
         if not representative_signature_file:
+            print("Failed to upload the representative_signature file, status = 400")
             return Response('Failed to upload the representative_signature file', status=400)
 
         representative_signature_details = get_signature_file(contact_id, representative_signature_file, representative_signature_file_name)
         if not representative_signature_details:
+            print("Failed to get representative_signature file details, status = 400")
             return Response('Failed to get representative_signature file details', status=400)
 
     try:
@@ -1228,8 +1235,10 @@ def submit_agreement_v2(request):
         contact.pdf_url = agreement_file_details['file_link']
         contact.save()
         serializer = ContactSerializerV2(contact)
+        print('successfull, status = 200, ok')
         return Response({'data': serializer.data}, status=status.HTTP_200_OK)
     else:
+        print('Failed to upload the files to CF, status = 400')
         return Response('Failed to upload the files to CF', status=400)
 
 def upload_agreement_file(contact_id):
