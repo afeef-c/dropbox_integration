@@ -449,12 +449,12 @@ def create_all_task(self, contact_id, *args):
         pass_project_id_to_ghl(contact.location_id, contact_id, project_id)
     
     tasks = [
-        {"category": "Sales", "task_name": "Contract signed & numbered", "assigned_to": ["Gio Leonardo", "Julian Terrazas", "Kimberly Parry", "Enjoli Cullen"]},
+        {"category": "Sales", "task_name": "Contract signed & numbered", "assigned_to": ["Gio Leonardo", "Julian Terrazas", "Kimberly Parry"]},
         {"category": "Sales", "task_name": "Project added to Dropbox", "assigned_to": ["Debra Leonardo"]},
         {"category": "Sales", "task_name": "Emailed to PM & Office", "assigned_to": ["Debra Leonardo"]},
         {"category": "Sales", "task_name": "PM to call client for intro", "assigned_to": ["Courtney Smith"]},
-        {"category": "Sales", "task_name": "Initial payment captured", "assigned_to": ["Gio Leonardo", "Julian Terrazas", "Kimberly Parry", "Enjoli Cullen"]},
-        {"category": "Sales", "task_name": "Design notes added to Dropbox", "assigned_to": ["Gio Leonardo", "Julian Terrazas", "Kimberly Parry", "Enjoli Cullen"]},
+        {"category": "Sales", "task_name": "Initial payment captured", "assigned_to": ["Gio Leonardo", "Julian Terrazas", "Kimberly Parry"]},
+        {"category": "Sales", "task_name": "Design notes added to Dropbox", "assigned_to": ["Gio Leonardo", "Julian Terrazas", "Kimberly Parry"]},
         {"category": "Sales", "task_name": "HOA Guidelines captured", "assigned_to": ["Courtney Smith"]},
         {"category": "Sales", "task_name": "Questionnaire captured", "assigned_to": ["Courtney Smith"]},
         {"category": "Sales", "task_name": "House plans scanned (if applicable)", "assigned_to": ["Gio Leonardo"]},
@@ -470,7 +470,7 @@ def create_all_task(self, contact_id, *args):
         # {"category": "Hardscape", "task_name": "Evaluate progress", "assigned_to": []}, #
         # {"category": "Hardscape", "task_name": "Address risks", "assigned_to": []}, #
 
-        {"category": "Hardscape", "task_name": "Design review with sales as needed", "assigned_to": ["Gio Leonardo", "Julian Terrazas", "Kimberly Parry", "Enjoli Cullen"]},
+        {"category": "Hardscape", "task_name": "Design review with sales as needed", "assigned_to": ["Gio Leonardo", "Julian Terrazas", "Kimberly Parry"]},
         {"category": "Hardscape", "task_name": "House created in Structure Studio", "assigned_to": ["Mike Koppenhaver", "Rebekah Koppenhaver"]},
         {"category": "Hardscape", "task_name": "Design review with client", "assigned_to": ["Mike Koppenhaver", "Gio Leonardo"]},
         {"category": "Hardscape", "task_name": "HP Created", "assigned_to": ["Mike Koppenhaver"]},
