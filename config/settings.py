@@ -182,12 +182,15 @@ BASE_URL = config('BASE_URL')
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Set the maximum size for file uploads (in bytes)
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB
+
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
 
 # Increase the maximum POST size if necessary
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
 
+# Maximum size that can be uploaded
+MAX_UPLOAD_SIZE = 52428800  # 50 MB
 
 
 SIMPLE_JWT = {
