@@ -2789,3 +2789,9 @@ def get_ghl_users(request):
     serializer = GhlUserSerializer(all_users, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+@api_view(['GET'])
+def create_task_for_contact(request, contact_id):
+    create_task_for_contact.delay(contact_id)
+    return Response({"message": "Task created successfully"}, status=status.HTTP_200_OK)
+
