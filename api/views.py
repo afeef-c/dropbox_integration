@@ -2647,7 +2647,7 @@ def open_projects_gantt_chart(request):
     ).annotate(
         smallest_start_date=Min('contact__start_date'),
         largest_due_date=Max('contact__due_date'),
-        total_tasks=Count('contact__id')
+        total_tasks=Count('contact')
     ).distinct().order_by('submitted_at')
 
     result = Task.objects.filter(
@@ -2665,8 +2665,7 @@ def open_projects_gantt_chart(request):
     order = 0
     for contact in contacts_with_incomplete_tasks:
         completed_tasks = Task.objects.filter(contact=contact, completed=True).count()
-        # Ensure we don't divide by zero and cap progress at 100
-        progress = min(100, (completed_tasks/contact.total_tasks * 100) if contact.total_tasks > 0 else 0)
+        progress = (completed_tasks/contact.total_tasks) * 100
         order += 1
         task_data = {
             'start': contact.smallest_start_date,
