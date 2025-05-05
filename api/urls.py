@@ -28,5 +28,5 @@ urlpatterns = [
     path('credit_card/<str:contact_id>', CreditCardView.as_view(), name='credit_card_get'),
 
     path('get_ghl_users', get_ghl_users, name='get_ghl_users'),
-    path('create_task_for_contact/<str:contact_id>', create_task_for_contact, name='create_task_for_contact'),
+    path('create_task_for_contact_api/<str:contact_id>', create_task_for_contact_api, name='create_task_for_contact_api'),
 ]

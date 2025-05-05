@@ -15,7 +15,7 @@ import pytz
 import uuid
 from .serializers import *
 from django.db.models import Q
-from .tasks import historic_fetch, fetch_users_by_location, create_all_task, update_task_status, wait_task
+from .tasks import historic_fetch, fetch_users_by_location, create_all_task, update_task_status, wait_task, create_task_for_contact
 import json
 from django.core.files.base import ContentFile
 import base64
@@ -2791,7 +2791,7 @@ def get_ghl_users(request):
 
 
 @api_view(['GET'])
-def create_task_for_contact(request, contact_id):
+def create_task_for_contact_api(request, contact_id):
     create_task_for_contact.delay(contact_id)
     return Response({"message": "Task created successfully"}, status=status.HTTP_200_OK)
 
