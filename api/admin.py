@@ -8,3 +8,5 @@ admin.site.register(Contact)
 admin.site.register(User)
 admin.site.register(Task)
 admin.site.register(TaskTemplate)
+admin.site.register(DropBoxToken)
+
