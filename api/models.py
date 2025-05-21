@@ -1,5 +1,9 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
+from django.utils.timezone import now
+from django.conf import settings
+from datetime import timedelta
+import requests
 
 # Create your models here.
 
@@ -81,6 +85,11 @@ class User(models.Model):
         return self.name
 
 class Task(models.Model):
+    END_CHOICES = [
+        ('yes', 'Yes'),
+        ('no', 'No'),
+        ('na', 'N/A'),
+    ]
     task_id = models.CharField(primary_key=True, max_length=700)
     contact = models.ForeignKey(Contact, related_name='contact', on_delete=models.CASCADE)
     category = models.CharField(max_length=700, null=True, blank=True)
@@ -93,6 +102,10 @@ class Task(models.Model):
     start_date = models.DateField(null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    is_progress = models.BooleanField(default=True)
+    end_choices = models.CharField(max_length=10, choices=END_CHOICES, default='na')
+    
 
     class Meta:
         unique_together = ('contact', 'category', 'name')
@@ -124,3 +137,55 @@ class TaskTemplate(models.Model):
 
     def __str__(self):
         return f"{self.category} - {self.task_name}"
+    
+    
+    
+class DropBoxToken(models.Model):
+    access_token = models.TextField()
+    refresh_token = models.TextField(blank=True, null=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return self.access_token[:5]
+
+
+
+    def is_expired(self):
+        return now() >= self.expires_at
+
+    def refresh_access_token(self):
+        if not self.refresh_token:
+            return None  
+        
+        
+        url = "https://api.dropbox.com/oauth2/token"
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+
+        data = {
+            "refresh_token": self.refresh_token,
+            "grant_type": "refresh_token",
+            "client_id": settings.APP_KEY,
+            "client_secret": settings.APP_SECRET
+        }
+        response = requests.post(url, headers=headers, data=data)
+
+        if response.status_code == 200:
+            token_data = response.json()
+            self.access_token = token_data["access_token"]
+            self.expires_at = now() + timedelta(seconds=token_data["expires_in"])
+            self.save()
+            return self.access_token
+        else:
+            print("Failed to refresh token:", response.json())
+            return None
+
+    def get_valid_access_token(self):
+        """Get a valid access token, refreshing if expired."""
+        if self.is_expired():
+            return self.refresh_access_token()
+        return self.access_token
+
+
+

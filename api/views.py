@@ -7,10 +7,11 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
 from django.conf import settings
 from .models import *
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 import datetime
 from datetime import timedelta
 from datetime import timezone as tzone
+from django.utils import timezone
 import pytz
 import uuid
 from .serializers import *
@@ -32,6 +33,10 @@ from rest_framework.views import APIView
 from .models import CreditCard, Contact
 from .utils import encrypt_data, decrypt_data
 import logging
+import dropbox
+from dropbox.exceptions import ApiError
+
+
 
 # Create your views here.
 def onboarding_page(request):
@@ -2491,7 +2496,8 @@ def update_task_v2(request, task_id):
 
     task = Task.objects.get(task_id=task_id)
     data = request.data
-
+    task_name = task.name
+    task_category = task.category
     print(data)
 
     date_obj = datetime.datetime.strptime(data['end'], "%Y-%m-%d")
@@ -2526,9 +2532,10 @@ def update_task_v2(request, task_id):
 
         progress = 100 if is_complete else 0
 
-
+    elif 'end_choices' in data:
+        end_choices = data.get('end_choices')                                                          
     contact = task.contact
-
+    client_name = contact.name
     is_ghl_task_update = update_ghl_task_v2(contact.location_id, contact.contact_id, task_id, due_date_pst, user_id, is_complete)
     if is_ghl_task_update:
         task.start_date = data['start']
@@ -2537,7 +2544,14 @@ def update_task_v2(request, task_id):
         task.assigned_to_id = user_id
         task.completed = is_complete
         task.progress = progress
+        task.end_choices = end_choices
+        
         task.save()
+    
+    if task_category=="Final Set of Plans" and task_name == "Digital copies sent to client" and is_complete:
+        folder_location = '/active/'+client_name
+        dest_loaction = "/archived/"+client_name
+        move_dropbox_folder(folder_location, dest_loaction)
 
 
     all_tasks = Task.objects.filter(contact=contact).order_by('created_at')
@@ -2794,4 +2808,93 @@ def get_ghl_users(request):
 def create_task_for_contact_api(request, contact_id):
     create_task_for_contact.delay(contact_id)
     return Response({"message": "Task created successfully"}, status=status.HTTP_200_OK)
+
+
+
+def move_dropbox_folder(from_path, to_path):
+    """
+    Moves a folder from one location to another in Dropbox.
+
+    Parameters:
+    - access_token (str): Dropbox API access token
+    - from_path (str): Full path of the source folder (e.g., '/source_folder')
+    - to_path (str): Full path of the destination folder (e.g., '/destination_folder')
+    """
+    dbx = dropbox.Dropbox(settings.DROPBOX_ACCESS_TOKEN)
+    try:
+        result = dbx.files_move_v2(from_path, to_path)
+        print(f"Folder moved successfully to {to_path}")
+        return result
+    except ApiError as err:
+        print(f"API error: {err}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+
+
+
+def dropbox_redirect(request):
+    auth_code = request.GET.get('code') 
+    print("auth_code: ", auth_code)
+    if auth_code:
+        generate_dropbox_token(auth_code)
+        return HttpResponse("Success")
+    else:
+        return HttpResponse("Authorization code not found", status=400)
+
+
+def generate_dropbox_token(auth_code):
+    url = "https://api.dropbox.com/oauth2/token"
+
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    data = {
+        "code": auth_code,
+        "grant_type": "authorization_code",
+        "client_id": settings.APP_KEY,
+        "client_secret": settings.APP_SECRET,
+        "redirect_uri": settings.REDIRECT_URI
+    }
+
+    response = requests.post(url, headers=headers, data=data)
+
+    if response.status_code == 200:
+        token_data = response.json()
+        print("\nToken Data:", token_data, "\n")
+
+        access_token  = token_data.get("access_token")
+        refresh_token = token_data.get("refresh_token")
+        expires_in    = token_data.get("expires_in")  # in seconds
+
+        expires_at = timezone.now() + timedelta(seconds=expires_in)
+
+        # Get existing token or create a new one
+        dropbox_token = DropBoxToken.objects.first()
+        if not dropbox_token:
+            dropbox_token = DropBoxToken()
+
+        dropbox_token.access_token = access_token
+        dropbox_token.refresh_token = refresh_token
+        dropbox_token.expires_at = expires_at
+        dropbox_token.save()
+
+        
+
+    else:
+        print("Error:", response.status_code, response.text) 
+        
+
+
+
+
+
+
+
+
+
+
+
 

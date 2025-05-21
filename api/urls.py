@@ -29,4 +29,7 @@ urlpatterns = [
 
     path('get_ghl_users', get_ghl_users, name='get_ghl_users'),
     path('create_task_for_contact_api/<str:contact_id>', create_task_for_contact_api, name='create_task_for_contact_api'),
+
+    path("dropbox_redirect/", dropbox_redirect, name="dropbox_redirect")
+
 ]

@@ -459,11 +459,13 @@ def create_all_task(self, contact_id, *args):
         {"category": "Sales", "task_name": "Questionnaire captured", "assigned_to": ["Courtney Smith"]},
         {"category": "Sales", "task_name": "House plans scanned (if applicable)", "assigned_to": ["Gio Leonardo"]},
         {"category": "Sales", "task_name": "Get Setbacks", "assigned_to": ["Courtney Smith"]},
-
+        
         # {"category": "Measure", "task_name": "Schedule measure", "assigned_to": ["Julian Terrazas"]}, #
 
         {"category": "Measure", "task_name": "Measure/Prop Pics/Aerials", "assigned_to": ["Julian Terrazas"]},
-        {"category": "Site Plan Created", "task_name": "Site plan completed", "assigned_to": ["Gio Leonardo", "Julian Terrazas"]},
+        
+        # Remove the “Site Plan Created” title
+        # {"category": "Site Plan Created", "task_name": "Site plan completed", "assigned_to": ["Gio Leonardo", "Julian Terrazas"]},
 
         # {"category": "Hardscape", "task_name": "Monitor progress", "assigned_to": []}, #
         # {"category": "Hardscape", "task_name": "Track expenses", "assigned_to": []}, #
@@ -482,6 +484,9 @@ def create_all_task(self, contact_id, *args):
         {"category": "Hardscape", "task_name": "HP Sign-Off (Notify Office & PP)", "assigned_to": ["Mike Koppenhaver", "Gio Leonardo"]},
         {"category": "Hardscape", "task_name": "HP Created for PP", "assigned_to": ["Mike Koppenhaver"]},
         {"category": "Hardscape", "task_name": "HP Payment captured", "assigned_to": ["Mike Koppenhaver", "Gio Leonardo", "Debra Leonardo"]},
+        
+        
+        
         {"category": "Planting Plan", "task_name": "Initial call to client", "assigned_to": ["Courtney Smith", "Kimberly Parry"]},
         {"category": "Planting Plan", "task_name": "PP created", "assigned_to": ["Courtney Smith", "Kimberly Parry"]},
         {"category": "Planting Plan", "task_name": "PP meeting with client", "assigned_to": ["Courtney Smith", "Kimberly Parry"]},
@@ -491,6 +496,7 @@ def create_all_task(self, contact_id, *args):
         {"category": "Planting Plan", "task_name": "PP Sign-Off (Notify office)", "assigned_to": ["Courtney Smith", "Kimberly Parry"]},
         {"category": "Planting Plan", "task_name": "PP payment captured", "assigned_to": ["Courtney Smith", "Kimberly Parry", "Debra Leonardo"]},
         {"category": "Planting Plan", "task_name": "Layout Final set of plans on Borders", "assigned_to": ["Courtney Smith"]},
+        
         {"category": "Final Set of Plans", "task_name": "Notify Designer to create Final HP (Callouts/totals/screenshots)", "assigned_to": ["Courtney Smith"]},
         {"category": "Final Set of Plans", "task_name": "Hardscape created (Notify PM)", "assigned_to": ["Mike Koppenhaver"]},
         {"category": "Final Set of Plans", "task_name": "Assign Tech Sheets to Designer (PM to notify)", "assigned_to": ["Courtney Smith"]},
@@ -499,7 +505,8 @@ def create_all_task(self, contact_id, *args):
         {"category": "Final Set of Plans", "task_name": "Create Lighting", "assigned_to": ["Mike Koppenhaver", "Rebekah Koppenhaver", "Courtney Smith"]},
         {"category": "Final Set of Plans", "task_name": "QC Tech sheets (Notify PM & Gio)", "assigned_to": ["Gio Leonardo", "Courtney Smith"]},
         {"category": "Final Set of Plans", "task_name": "PM to notify Gio for Final", "assigned_to": ["Courtney Smith"]},
-        {"category": "Final Set of Plans", "task_name": "Schedule client for Final", "assigned_to": ["Gio Leonardo"]},
+        # Delete “Schedule clients for Final”
+        # {"category": "Final Set of Plans", "task_name": "Schedule client for Final", "assigned_to": ["Gio Leonardo"]},
         {"category": "Final Set of Plans", "task_name": "Final plan presentation", "assigned_to": ["Gio Leonardo"]},
         {"category": "Final Set of Plans", "task_name": "Final payment captured", "assigned_to": ["Debra Leonardo"]},
         {"category": "Final Set of Plans", "task_name": "Digital copies sent to client", "assigned_to": ["Gio Leonardo"]}
@@ -590,12 +597,26 @@ def create_all_task(self, contact_id, *args):
                 start_at_obj = input_timezone.localize(naive_start_at)
                 target_timezone = pytz.timezone(location_timezone)
                 start_date = start_at_obj.astimezone(target_timezone).replace(tzinfo=None).date()
-
+                task_names = {
+                    "Sales":["Project added to Dropbox","HOA Guidelines captured", "Questionnaire captured", "House plans scanned (if applicable)", "Get Setbacks"],
+                    "Hardscape": ["Design review with sales as needed", "Design review with client", "Hardscape numbers", "Revisions 1", "Revisions 2", "Revisions 3 (If needed/Hourly rates apply)"],
+                    "Planting Plan": ["PP created", "Revisions 1", "Revisions 2", "Revisions 3 (If needed/Hourly rates apply)","Layout Final set of plans on Borders"],
+                    "Final Set of Plans": ["QC Tech sheets (Notify PM & Gio)", "PM to notify Gio for Final", ] 
+                    }
+                if task_name in ["Project added to Dropbox","HOA Guidelines captured", "Questionnaire captured", "House plans scanned (if applicable)", "Get Setbacks",
+                                 "Design review with sales as needed", "Design review with client", "Hardscape numbers", "Revisions 1", "Revisions 2", "Revisions 3 (If needed/Hourly rates apply)",
+                                 "PP created", "Layout Final set of plans on Borders", 
+                                 "QC Tech sheets (Notify PM & Gio)", "PM to notify Gio for Final"
+                                 ]:
+                    is_progress=False
+                else:
+                    is_progress=True
                 Task.objects.update_or_create(
                     task_id = task_id,
                     contact = contact,
                     category = category,
                     name = task_name,
+                    is_progress=is_progress,
                     defaults={
                         'assigned_to_id' : user_id,
                         'assigned_to' : assigned_user_name,
@@ -985,7 +1006,9 @@ def create_task_for_contact(self, contact_id, *args):
 
 
         {"category": "Measure", "task_name": "Measure/Prop Pics/Aerials", "assigned_to": ["Julian Terrazas"]},
-        {"category": "Site Plan Created", "task_name": "Site plan completed", "assigned_to": ["Gio Leonardo", "Julian Terrazas"]},
+        
+        # Remove the “Site Plan Created” title
+        # {"category": "Site Plan Created", "task_name": "Site plan completed", "assigned_to": ["Gio Leonardo", "Julian Terrazas"]},
 
 
         {"category": "Hardscape", "task_name": "Design review with sales as needed", "assigned_to": ["Gio Leonardo", "Julian Terrazas", "Kimberly Parry"]},
@@ -1000,6 +1023,7 @@ def create_task_for_contact(self, contact_id, *args):
         {"category": "Hardscape", "task_name": "HP Sign-Off (Notify Office & PP)", "assigned_to": ["Mike Koppenhaver", "Gio Leonardo"]},
         {"category": "Hardscape", "task_name": "HP Created for PP", "assigned_to": ["Mike Koppenhaver"]},
         {"category": "Hardscape", "task_name": "HP Payment captured", "assigned_to": ["Mike Koppenhaver", "Gio Leonardo", "Debra Leonardo"]},
+        
         {"category": "Planting Plan", "task_name": "Initial call to client", "assigned_to": ["Courtney Smith", "Kimberly Parry"]},
         {"category": "Planting Plan", "task_name": "PP created", "assigned_to": ["Courtney Smith", "Kimberly Parry"]},
         {"category": "Planting Plan", "task_name": "PP meeting with client", "assigned_to": ["Courtney Smith", "Kimberly Parry"]},
@@ -1009,6 +1033,7 @@ def create_task_for_contact(self, contact_id, *args):
         {"category": "Planting Plan", "task_name": "PP Sign-Off (Notify office)", "assigned_to": ["Courtney Smith", "Kimberly Parry"]},
         {"category": "Planting Plan", "task_name": "PP payment captured", "assigned_to": ["Courtney Smith", "Kimberly Parry", "Debra Leonardo"]},
         {"category": "Planting Plan", "task_name": "Layout Final set of plans on Borders", "assigned_to": ["Courtney Smith"]},
+       
         {"category": "Final Set of Plans", "task_name": "Notify Designer to create Final HP (Callouts/totals/screenshots)", "assigned_to": ["Courtney Smith"]},
         {"category": "Final Set of Plans", "task_name": "Hardscape created (Notify PM)", "assigned_to": ["Mike Koppenhaver"]},
         {"category": "Final Set of Plans", "task_name": "Assign Tech Sheets to Designer (PM to notify)", "assigned_to": ["Courtney Smith"]},
@@ -1055,11 +1080,20 @@ def create_task_for_contact(self, contact_id, *args):
     due_date_obj = input_timezone.localize(naive_due_date)
     target_timezone = pytz.timezone(location_timezone)
     due_date_in_location_time_zone = due_date_obj.astimezone(target_timezone).replace(tzinfo=None).date()
-
+    
 
     for task in tasks:
         task_name = task['task_name']
         category = task['category']
+        if task_name in ["Project added to Dropbox","HOA Guidelines captured", "Questionnaire captured", "House plans scanned (if applicable)", "Get Setbacks",
+                            "Design review with sales as needed", "Design review with client", "Hardscape numbers", "Revisions 1", "Revisions 2", "Revisions 3 (If needed/Hourly rates apply)",
+                            "PP created", "Layout Final set of plans on Borders", 
+                            "QC Tech sheets (Notify PM & Gio)", "PM to notify Gio for Final"
+                            ]:
+            is_progress=False
+        else:
+            is_progress=True
+        
         if not Task.objects.filter(contact=contact, name=task_name, category=category).exists():
             assigned_to_list = task['assigned_to']
             if assigned_to_list:
@@ -1089,7 +1123,7 @@ def create_task_for_contact(self, contact_id, *args):
 
             print(assigned_user_name)
             user_id = User.objects.get(name=assigned_user_name).user_id
-
+            
             new_task = create_task(location_id, contact_id, task_name, user_id, due_date)
             if new_task:
                 task_id = new_task['id']
@@ -1109,11 +1143,14 @@ def create_task_for_contact(self, contact_id, *args):
                 target_timezone = pytz.timezone(location_timezone)
                 start_date = start_at_obj.astimezone(target_timezone).replace(tzinfo=None).date()
 
+
+
                 Task.objects.update_or_create(
                     task_id = task_id,
                     contact = contact,
                     category = category,
                     name = task_name,
+                    is_progress=is_progress,
                     defaults={
                         'assigned_to_id' : user_id,
                         'assigned_to' : assigned_user_name,
