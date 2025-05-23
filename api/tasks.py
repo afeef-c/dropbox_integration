@@ -708,6 +708,7 @@ def create_task(location_id, contact_id, task_name, user_id, due_date):
         print(response.json())
         return None
     
+    
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
 def get_and_update_all_task(self, *args):
     location = Location.objects.first()
@@ -1164,3 +1165,8 @@ def create_task_for_contact(self, contact_id, *args):
                 print(f'Failed to create the {task_name} task for {contact.name}')
         else:
             print(f'{task_name} task already added')
+
+
+
+
+

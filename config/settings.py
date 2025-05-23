@@ -17,6 +17,8 @@ from datetime import timedelta
 from dotenv import load_dotenv
 import base64
 
+
+
 load_dotenv()
 ENCRYPTION_SECRET_KEY = os.getenv("SECRET_ENCRYPTION_KEY")
 
@@ -182,8 +184,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CLIENT_ID=config('CLIENT_ID')
-CLIENT_SECRET=config('CLIENT_SECRET')
+CLIENT_ID = config('CLIENT_ID')
+CLIENT_SECRET = config('CLIENT_SECRET')
 BASE_URL = config('BASE_URL')
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -214,6 +216,11 @@ AUTH_USER_MODEL = 'authentication.CustomUser'
 DROPBOX_ACCESS_TOKEN="DROPBOX_ACCESS_TOKEN"
 
 
-APP_KEY=config("APP_KEY")
-APP_SECRET=config("APP_SECRET")
-REDIRECT_URI="http://127.0.0.1:8000/dropbox_redirect/"
+# APP_KEY = config('APP_KEY')
+# APP_SECRET = config('APP_SECRET')
+APP_KEY="pv5ahrhmfux3s52"
+
+APP_SECRET="5cimrrf4reawij1"
+
+
+REDIRECT_URI = "http://127.0.0.1:8000/dropbox_redirect/"

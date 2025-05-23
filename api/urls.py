@@ -17,8 +17,6 @@ urlpatterns = [
 
     path('submit_form_data_v2', submit_form_data_v2, name='submit_form_data_v2'),
     
-    path('submit_form_data_v3', submit_form_data_v3, name='submit_form_data_v3'),
-    
     path('submit_agreement_v2', submit_agreement_v2, name='submit_agreement_v2'),
     path('submit_client_signature_form_data_v2', submit_client_signature_form_data_v2, name='submit_client_signature_form_data_v2'),
     path('submit_client_signature_v2', submit_client_signature_v2, name='submit_client_signature_v2'),
@@ -33,6 +31,7 @@ urlpatterns = [
     path('get_ghl_users', get_ghl_users, name='get_ghl_users'),
     path('create_task_for_contact_api/<str:contact_id>', create_task_for_contact_api, name='create_task_for_contact_api'),
 
+    path("dropbox_onboard/", dropbox_onboard, name="dropbox_onboard"),
     path("dropbox_redirect/", dropbox_redirect, name="dropbox_redirect")
 
 ]
