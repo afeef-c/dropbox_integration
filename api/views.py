@@ -2833,25 +2833,30 @@ def move_dropbox_folder(from_path, to_path):
 
 
 def dropbox_onboard(request):
-    # Redirect the user to Dropbox for authorization
-    print("Redirecting to Dropbox for authorization...",settings.APP_KEY, settings.REDIRECT_URI), 
-    auth_url = f"https://www.dropbox.com/oauth2/authorize?client_id={settings.APP_KEY}&response_type=code&token_access_type=offline&redirect_uri={settings.REDIRECT_URI}&state=12345"
+    # Step 1: Redirect the user to Dropbox for authorization
+    auth_url = (
+        f"https://www.dropbox.com/oauth2/authorize?"
+        f"client_id={settings.APP_KEY}&"
+        f"response_type=code&"
+        f"token_access_type=offline&"  # for refresh token
+        f"redirect_uri={settings.REDIRECT_URI}&"
+        f"state=12345"
+    )
     return redirect(auth_url)
 
 
-
 def dropbox_redirect(request):
-    auth_code = request.GET.get('code') 
-    print("auth_code: ", auth_code)
-    if auth_code:
-        generate_dropbox_token(auth_code)
-        return HttpResponse("Success")
-    else:
+    # Step 2: Handle the redirect from Dropbox and exchange code for token
+    auth_code = request.GET.get('code')
+    if not auth_code:
         return HttpResponse("Authorization code not found", status=400)
+    
+    success, message = generate_dropbox_token(auth_code)
+    return HttpResponse(message if success else message, status=200 if success else 400)
 
 
 def generate_dropbox_token(auth_code):
-    url = "https://api.dropbox.com/oauth2/token"
+    url = "https://api.dropboxapi.com/oauth2/token"  # FIXED URL
 
     headers = {
         "Content-Type": "application/x-www-form-urlencoded"
@@ -2867,33 +2872,39 @@ def generate_dropbox_token(auth_code):
 
     response = requests.post(url, headers=headers, data=data)
 
-    if response.status_code == 200:
-        token_data = response.json()
-        print("\nToken Data:", token_data, "\n")
+    if response.status_code != 200:
+        # Early return on failure
+        print("Token exchange failed:", response.text)
+        return False, f"Token exchange failed: {response.text}"
 
-        access_token  = token_data.get("access_token")
-        refresh_token = token_data.get("refresh_token")
-        expires_in    = token_data.get("expires_in")  # in seconds
+    # Only continue if token request succeeded
+    token_data = response.json()
 
-        expires_at = timezone.now() + timedelta(seconds=expires_in)
+    access_token = token_data.get("access_token")
+    refresh_token = token_data.get("refresh_token")
+    expires_in = token_data.get("expires_in")
 
-        # Get existing token or create a new one
-        dropbox_token = DropBoxToken.objects.first()
-        if not dropbox_token:
-            dropbox_token = DropBoxToken()
+    if not access_token or not expires_in:
+        return False, "Missing access token or expiration in response"
 
+    expires_at = timezone.now() + timedelta(seconds=expires_in)
+
+    dropbox_token, created = DropBoxToken.objects.get_or_create(
+        id=1,
+        defaults={
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "expires_at": expires_at,
+        }
+    )
+    if not created:
         dropbox_token.access_token = access_token
         dropbox_token.refresh_token = refresh_token
         dropbox_token.expires_at = expires_at
         dropbox_token.save()
 
-        
 
-    else:
-        print("Error:", response.status_code, response.text) 
-        
-
-
+    return True, "Dropbox token saved successfully."
 
 
 
