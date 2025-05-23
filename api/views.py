@@ -2895,7 +2895,7 @@ def generate_dropbox_token(auth_code):
 
     # Create or update DropboxToken
     DropBoxToken.objects.update_or_create(
-         id=1,
+        id=1,
         defaults={
             "access_token": access_token,
             "refresh_token": refresh_token,
