@@ -2834,7 +2834,7 @@ def move_dropbox_folder(from_path, to_path):
 
 def dropbox_onboard(request):
     # Redirect the user to Dropbox for authorization
-    print("Redirecting to Dropbox for authorization...",settings.APP_KEY), 
+    print("Redirecting to Dropbox for authorization...",settings.APP_KEY, settings.REDIRECT_URI), 
     auth_url = f"https://www.dropbox.com/oauth2/authorize?client_id={settings.APP_KEY}&response_type=code&token_access_type=offline&redirect_uri={settings.REDIRECT_URI}&state=12345"
     return redirect(auth_url)
 

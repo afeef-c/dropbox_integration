@@ -216,11 +216,6 @@ AUTH_USER_MODEL = 'authentication.CustomUser'
 DROPBOX_ACCESS_TOKEN="DROPBOX_ACCESS_TOKEN"
 
 
-# APP_KEY = config('APP_KEY')
-# APP_SECRET = config('APP_SECRET')
-APP_KEY="pv5ahrhmfux3s52"
-
-APP_SECRET="5cimrrf4reawij1"
-
-
-REDIRECT_URI = "http://127.0.0.1:8000/dropbox_redirect/"
+APP_KEY = config('APP_KEY')
+APP_SECRET = config('APP_SECRET')
+REDIRECT_URI=config('REDIRECT_URI')
