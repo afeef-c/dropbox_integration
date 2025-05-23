@@ -2846,13 +2846,16 @@ def dropbox_onboard(request):
 
 
 def dropbox_redirect(request):
-    # Step 2: Handle the redirect from Dropbox and exchange code for token
     auth_code = request.GET.get('code')
     if not auth_code:
         return HttpResponse("Authorization code not found", status=400)
-    
+
     success, message = generate_dropbox_token(auth_code)
-    return HttpResponse(message if success else message, status=200 if success else 400)
+
+    if success:
+        return HttpResponse("Dropbox token saved successfully.")
+    else:
+        return HttpResponse(f"Error during Dropbox token exchange: {message}", status=400)
 
 
 def generate_dropbox_token(auth_code):
